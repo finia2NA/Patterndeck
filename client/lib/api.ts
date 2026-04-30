@@ -13,6 +13,38 @@ import {
   type SettingsMap,
 } from '@/hooks/state/persistent/settingsStore';
 
+const ANDROID_EMULATOR_HOST = '10.0.2.2';
+const LOCALHOST_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]']);
+
+function getAndroidDevHost(): string {
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    try {
+      const url = new URL(/^https?:\/\//i.test(hostUri) ? hostUri : `http://${hostUri}`);
+      if (url.hostname && !LOCALHOST_HOSTS.has(url.hostname.toLowerCase())) {
+        return url.hostname;
+      }
+    } catch {
+      // Fall back to the Android emulator host alias below.
+    }
+  }
+  return ANDROID_EMULATOR_HOST;
+}
+
+export function resolveBackendBaseUrlForPlatform(baseUrl: string): string {
+  if (Platform.OS !== 'android' || !__DEV__) return baseUrl;
+
+  try {
+    const url = new URL(baseUrl);
+    if (LOCALHOST_HOSTS.has(url.hostname.toLowerCase())) {
+      url.hostname = getAndroidDevHost();
+    }
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return baseUrl;
+  }
+}
+
 function getConfiguredBaseUrl(): string {
   if (Platform.OS === 'web' && !__DEV__) {
     // Production web: same origin, nginx proxies /api → Express
@@ -21,12 +53,12 @@ function getConfiguredBaseUrl(): string {
   // Dev (all platforms) and native prod: use configured host
   const host = Constants.expoConfig?.extra?.devServerHost ?? 'localhost';
   const port = Constants.expoConfig?.extra?.devServerPort ?? '3001';
-  return `http://${host}:${port}/api`;
+  return resolveBackendBaseUrlForPlatform(`http://${host}:${port}/api`);
 }
 
 async function getBaseUrl(): Promise<string> {
   const override = await getBackendBaseUrl();
-  return override ?? getConfiguredBaseUrl();
+  return override ? resolveBackendBaseUrlForPlatform(override) : getConfiguredBaseUrl();
 }
 
 // ─── HTTP helpers ─────────────────────────────────────────────────────────────

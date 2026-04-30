@@ -19,7 +19,16 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clearBackendBaseUrl, getBackendBaseUrl, setAuthToken, setBackendBaseUrl } from '@/lib/storage';
-import { register, login, setApiKey, validateApiKey, getMe, hydrateSettings, forgotPassword } from '@/lib/api';
+import {
+  register,
+  login,
+  setApiKey,
+  validateApiKey,
+  getMe,
+  hydrateSettings,
+  forgotPassword,
+  resolveBackendBaseUrlForPlatform,
+} from '@/lib/api';
 import { useColors } from '@/constants/theme';
 import { OnboardingBackground } from '@/components/OnboardingBackground';
 import { validateEmail, validatePassword } from '@grammarcrammer/shared';
@@ -160,13 +169,14 @@ function BackendHostModal({ visible, onClose }: { visible: boolean; onClose: () 
     }
     setMessage('Testing...');
     try {
-      const res = await fetch(`${baseUrl}/health`);
+      const resolvedBaseUrl = resolveBackendBaseUrlForPlatform(baseUrl);
+      const res = await fetch(`${resolvedBaseUrl}/health`);
       const body = await res.json().catch(() => null);
       if (!res.ok) {
         setMessage(`HTTP ${res.status}`);
         return;
       }
-      setMessage(body?.status === 'ok' ? `OK: ${baseUrl}` : 'Connected, but unexpected response.');
+      setMessage(body?.status === 'ok' ? `OK: ${resolvedBaseUrl}` : 'Connected, but unexpected response.');
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Network request failed.');
     }
