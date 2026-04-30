@@ -18,7 +18,7 @@ import {
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { clearBackendBaseUrl, getBackendBaseUrl, setAuthToken, setBackendBaseUrl } from '@/lib/storage';
+import { clearBackendBaseUrl, getBackendBaseUrl, setAuthToken, setBackendBaseUrl, setUserEmail } from '@/lib/storage';
 import {
   register,
   login,
@@ -292,6 +292,7 @@ export default function Onboarding() {
         minWait,
       ]);
       await setAuthToken(result.token);
+      if (result.user.email) await setUserEmail(result.user.email);
       setLoading(false);
       setAccountSuccess(true);
     } catch (e) {

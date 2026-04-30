@@ -7,7 +7,7 @@ import {
 import { useColors } from '@/constants/theme';
 import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
 import { useRouter } from 'expo-router';
-import { clearAuthToken } from '@/lib/storage';
+import { clearAuthToken, clearUserEmail, getUserEmail } from '@/lib/storage';
 import { deleteApiKey, getUsageStatus, hydrateSettings, parseEnabledLanguages, saveSettings } from '@/lib/api';
 import type { UsageStatus } from '@/lib/api';
 import { getSettingsSnapshot, resetLocalSettings } from '@/hooks/state/persistent/settingsStore';
@@ -52,6 +52,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [showAddKey, setShowAddKey] = useState(false);
   const [languagesExpanded, setLanguagesExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -79,6 +80,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
     getUsageStatus().then(status => {
       if (mounted) setUsageStatus(status);
+    }).catch(() => {});
+    getUserEmail().then(email => {
+      if (mounted) setUserEmail(email);
     }).catch(() => {});
     setShowAddKey(false);
     setSaving(false);
@@ -117,6 +121,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
   async function handleLogout() {
     await clearAuthToken();
+    await clearUserEmail();
     resetLocalSettings();
     onClose();
     router.replace('/onboarding');
@@ -304,6 +309,12 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
       {/* Account */}
       <SectionCard title="Account">
+        {userEmail && (
+          <View className="mb-4">
+            <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-1">Logged in as</Text>
+            <Text className="text-foreground text-sm">{userEmail}</Text>
+          </View>
+        )}
         <View className="mb-4">
           <ConfirmButton
             label="Log Out"

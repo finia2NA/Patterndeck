@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const KEYS = {
   AUTH_TOKEN: 'auth_token',
+  USER_EMAIL: 'user_email',
   ONBOARDING_COMPLETE: 'onboarding_complete',
   COLLAPSED_NODES: 'collapsed_nodes',
   BACKEND_BASE_URL: 'backend_base_url',
@@ -17,6 +18,18 @@ export async function setAuthToken(token: string): Promise<void> {
 
 export async function clearAuthToken(): Promise<void> {
   await AsyncStorage.removeItem(KEYS.AUTH_TOKEN);
+}
+
+export async function getUserEmail(): Promise<string | null> {
+  return AsyncStorage.getItem(KEYS.USER_EMAIL);
+}
+
+export async function setUserEmail(email: string): Promise<void> {
+  await AsyncStorage.setItem(KEYS.USER_EMAIL, email);
+}
+
+export async function clearUserEmail(): Promise<void> {
+  await AsyncStorage.removeItem(KEYS.USER_EMAIL);
 }
 
 export async function isOnboardingComplete(): Promise<boolean> {
