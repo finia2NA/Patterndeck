@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, Animated, Easing, Alert, Platform } from 'react-native';
+import { View, Animated, Easing, Alert, Platform } from 'react-native';
 import { PageSheetModal } from '@/components/PageSheetModal';
+import { AnimatedTabbed } from '@/components/AnimatedTabbed';
 import type { Language, CardCount } from '@/constants/session';
 import { DEFAULT_LANGUAGES } from '@/constants/session';
 import type { TreeNode } from '@/lib/types';
@@ -87,11 +88,9 @@ export function DeckModal({
   const [contentTab, setContentTab] = useState<'create' | 'csv'>('create');
   const [csvContent, setCsvContent] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<CsvImportStatus>({ state: 'idle' });
-  const [tabSwitcherWidth, setTabSwitcherWidth] = useState(0);
   const tabContentOpacity = useRef(new Animated.Value(1)).current;
   const tabContentTranslateX = useRef(new Animated.Value(0)).current;
   const tabContentHeight = useRef(new Animated.Value(0)).current;
-  const tabIndicatorX = useRef(new Animated.Value(4)).current;
   const tabTransition = useRef<Animated.CompositeAnimation | null>(null);
   const tabHeightTransition = useRef<Animated.CompositeAnimation | null>(null);
   const contentHeightRef = useRef(0);
@@ -100,7 +99,6 @@ export function DeckModal({
   const [hasMeasuredHeight, setHasMeasuredHeight] = useState(false);
   const [heightAnimating, setHeightAnimating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const tabWidth = tabSwitcherWidth > 0 ? (tabSwitcherWidth - 12) / 2 : 0;
 
   useEffect(() => {
     if (visible) {
@@ -118,7 +116,6 @@ export function DeckModal({
       pendingFadeInRef.current = false;
       setHasMeasuredHeight(false);
       setHeightAnimating(false);
-      tabIndicatorX.setValue(4);
       if (isEdit && editNode) {
         setName(editNodePath ?? editNode.name);
         if (editNode.deck) {
@@ -141,25 +138,12 @@ export function DeckModal({
         setExplanation(initialData?.explanation ?? '');
       }
     }
-  }, [visible, editNode, editNodePath, initialData, isEdit, tabContentOpacity, tabContentTranslateX, tabContentHeight, tabIndicatorX]);
+  }, [visible, editNode, editNodePath, initialData, isEdit, tabContentOpacity, tabContentTranslateX, tabContentHeight]);
 
   useEffect(() => {
     if (!visible) return;
     setLanguage((prev: string) => enabledLanguages.includes(prev) ? prev : enabledLanguages[0] ?? DEFAULT_LANGUAGES[0]);
   }, [visible, enabledLanguages]);
-
-  useEffect(() => {
-    if (!canUseCsvTab || tabWidth <= 0) return;
-
-    const target = activeTab === 'create' ? 4 : 8 + tabWidth;
-    Animated.spring(tabIndicatorX, {
-      toValue: target,
-      damping: 18,
-      stiffness: 240,
-      mass: 0.9,
-      useNativeDriver: true,
-    }).start();
-  }, [activeTab, canUseCsvTab, tabWidth, tabIndicatorX]);
 
   const startFadeIn = useCallback(() => {
     tabTransition.current?.stop();
@@ -368,46 +352,16 @@ export function DeckModal({
       confirmCloses={false}
     >
       {canUseCsvTab && (
-        <View
-          className="mb-6 p-1 rounded-xl bg-background-muted border border-border flex-row gap-1 relative"
-          onLayout={(event) => setTabSwitcherWidth(event.nativeEvent.layout.width)}
-        >
-          {tabWidth > 0 && (
-            <Animated.View
-              pointerEvents="none"
-              className="bg-surface rounded-lg"
-              style={{
-                position: 'absolute',
-                top: 4,
-                bottom: 4,
-                left: 4,
-                width: tabWidth,
-                transform: [{ translateX: tabIndicatorX }],
-              }}
-            />
-          )}
-          <TouchableOpacity
-            className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === 'create' ? 'bg-primary' : 'bg-background-muted'}`}
-            style={{ zIndex: 1 }}
-            onPress={() => setActiveTab('create')}
-            activeOpacity={0.85}
-          >
-            <Text className={`text-sm font-semibold ${activeTab === 'create' ? 'text-primary-foreground' : 'text-primary'}`}>
-              Create Deck
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === 'csv' ? 'bg-primary' : 'bg-background-muted'}`}
-            style={{ zIndex: 1 }}
-            onPress={() => setActiveTab('csv')}
-            activeOpacity={0.85}
-          >
-            <Text className={`text-sm font-semibold ${activeTab === 'csv' ? 'text-primary-foreground' : 'text-primary'}`}>
-
-              Import CSV
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <AnimatedTabbed
+          className="mb-6"
+          variant="primary"
+          tabs={[
+            { value: 'create', label: 'Create Deck' },
+            { value: 'csv', label: 'Import CSV' },
+          ]}
+          value={activeTab}
+          onChange={setActiveTab}
+        />
       )}
 
       <Animated.View

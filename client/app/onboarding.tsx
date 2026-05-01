@@ -372,6 +372,20 @@ export default function Onboarding() {
   const isForgotStep = step === 3 && showForgotPassword;
   const isAccountStep = step === 3 && !showApiKeyForm && !showForgotPassword;
   const isApiKeyStep = step === 3 && showApiKeyForm;
+  const canGoBack = step > 0 || showApiKeyForm || showForgotPassword;
+
+  function handleBack() {
+    if (showForgotPassword) {
+      setShowForgotPassword(false);
+      setForgotSent(false);
+      setError(null);
+    } else if (showApiKeyForm) {
+      setShowApiKeyForm(false);
+      setError(null);
+    } else {
+      goToStep(step - 1);
+    }
+  }
 
   const registerBackgroundTap = useCallback(() => {
     if (!BACKEND_DEBUG_UI_ENABLED) return;
@@ -467,26 +481,15 @@ export default function Onboarding() {
 
           {/* Navigation */}
           <View className="flex-row mt-8 gap-3">
-            {(step > 0 || showApiKeyForm || showForgotPassword) && (
-              <TouchableOpacity
-                className="flex-1 py-3.5 rounded-xl border border-border items-center"
-                onPress={() => {
-                  if (showForgotPassword) {
-                    setShowForgotPassword(false);
-                    setForgotSent(false);
-                    setError(null);
-                  } else if (showApiKeyForm) {
-                    setShowApiKeyForm(false);
-                    setError(null);
-                  } else {
-                    goToStep(step - 1);
-                  }
-                }}
-                disabled={loading}
-              >
-                <Text className="text-foreground/80 font-semibold">Back</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              className={`flex-1 py-3.5 rounded-xl border border-border items-center ${canGoBack ? '' : 'opacity-0'}`}
+              onPress={handleBack}
+              disabled={!canGoBack || loading}
+              accessibilityElementsHidden={!canGoBack}
+              importantForAccessibility={canGoBack ? 'auto' : 'no-hide-descendants'}
+            >
+              <Text className="text-foreground/80 font-semibold">Back</Text>
+            </TouchableOpacity>
             {isForgotStep ? (
               !forgotSent ? (
                 <TouchableOpacity
@@ -500,7 +503,9 @@ export default function Onboarding() {
                     <Text className="text-primary-foreground font-semibold">Send Link</Text>
                   )}
                 </TouchableOpacity>
-              ) : null
+              ) : (
+                <View className="flex-1" />
+              )
             ) : isApiKeyStep ? (
               <TouchableOpacity
                 className={`flex-1 py-3.5 rounded-xl items-center ${loading ? 'bg-primary/70' : 'bg-primary'}`}

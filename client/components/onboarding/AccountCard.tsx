@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { View, Text, TextInput, Animated } from 'react-native';
 import { useColors } from '@/constants/theme';
 import { TouchTarget } from '@/components/TouchTarget';
+import { AnimatedTabbed } from '@/components/AnimatedTabbed';
 
 export interface AccountCardProps {
   email: string;
@@ -37,7 +38,7 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
       <Text className="text-3xl font-bold text-foreground mb-2">
         {success
           ? (isLogin ? 'Signed in!' : 'Account created!')
-          : (isLogin ? 'Sign in' : 'Create account')}
+          : 'Your account'}
       </Text>
       <Text className="text-foreground-secondary text-sm leading-6 mb-6">
         {success
@@ -45,9 +46,23 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
             ? 'Welcome back — your decks and settings are ready.'
             : 'Your account is set up and ready to go.')
           : (isLogin
-            ? 'Welcome back! Sign in to access your decks and settings.'
+            ? 'Sign in with the email and password you used before.'
             : 'Create an account to save your decks and study progress.')}
       </Text>
+
+      {!success && (
+        <AnimatedTabbed
+          className="mb-5"
+          variant="subtle"
+          tabs={[
+            { value: 'signup', label: 'Create account' },
+            { value: 'signin', label: 'Sign in' },
+          ]}
+          value={isLogin ? 'signin' : 'signup'}
+          onChange={() => onToggleMode()}
+          disabled={loading}
+        />
+      )}
 
       <Animated.View style={{ opacity: success ? formDim : 1 }} className="mb-4">
         <Text className="text-foreground/80 text-sm font-medium mb-2">Email</Text>
@@ -95,13 +110,8 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
       )}
       {!success && (
         <>
-          <TouchTarget onPress={onToggleMode} style={{ marginTop: 8, paddingHorizontal: 0 }}>
-            <Text className="text-primary text-sm">
-              {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-            </Text>
-          </TouchTarget>
           {isLogin && (
-            <TouchTarget onPress={onForgotPassword} style={{ marginTop: 0, paddingHorizontal: 0 }}>
+            <TouchTarget onPress={onForgotPassword} style={{ marginTop: 4, paddingHorizontal: 0 }}>
               <Text className="text-foreground-secondary text-sm">Forgot password?</Text>
             </TouchTarget>
           )}
