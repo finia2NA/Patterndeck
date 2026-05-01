@@ -64,6 +64,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-router',
     'expo-localization',
     'expo-notifications',
+    './plugins/without-ios-push-notifications',
     '@react-native-community/datetimepicker',
     [
       'expo-splash-screen',
