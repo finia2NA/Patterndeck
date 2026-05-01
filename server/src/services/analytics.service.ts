@@ -4,6 +4,7 @@ import { config } from '../config.js';
 type AnalyticsProperties = Record<string, unknown>;
 
 export interface AiAnalyticsContext {
+  appSessionId?: string;
   studySessionId?: string;
   deckId?: string;
   deckName?: string;
@@ -31,6 +32,8 @@ interface AiGenerationEvent extends AiAnalyticsContext {
   errorCode?: string;
   errorMessage?: string;
   stream?: boolean;
+  input?: unknown;
+  output?: unknown;
 }
 
 const client = config.posthogEnabled && config.posthogProjectApiKey
@@ -51,6 +54,8 @@ function toSnakeProperties(properties: AnalyticsProperties = {}): AnalyticsPrope
 function contextProperties(context: AiAnalyticsContext = {}): AnalyticsProperties {
   return toSnakeProperties({
     study_session_id: context.studySessionId,
+    app_session_id: context.appSessionId,
+    $session_id: context.appSessionId,
     deck_id: context.deckId,
     deck_name: context.deckName,
     deck_topic: context.deckTopic,
@@ -70,10 +75,14 @@ export function isAnalyticsEnabled(): boolean {
 
 export function capture(userId: string | undefined, event: string, properties: AnalyticsProperties = {}): void {
   if (!client || !userId) return;
+  const appSessionId = typeof properties.app_session_id === 'string' ? properties.app_session_id : undefined;
   client.capture({
     distinctId: userId,
     event,
-    properties: toSnakeProperties(properties),
+    properties: toSnakeProperties({
+      ...properties,
+      $session_id: appSessionId,
+    }),
   });
 }
 
@@ -100,7 +109,7 @@ export function captureAiGeneration(userId: string, event: AiGenerationEvent): v
     properties: toSnakeProperties({
       ...contextProperties(event),
       $ai_trace_id: event.traceId,
-      $ai_session_id: event.studySessionId,
+      $ai_session_id: event.studySessionId ?? event.appSessionId,
       $ai_provider: event.provider ?? 'anthropic',
       $ai_model: event.model,
       $ai_input_tokens: event.inputTokens,
@@ -114,6 +123,8 @@ export function captureAiGeneration(userId: string, event: AiGenerationEvent): v
       error_code: event.errorCode,
       error_message: event.errorMessage,
       stream: event.stream,
+      $ai_input: event.input,
+      $ai_output: event.output,
     }),
   });
 }

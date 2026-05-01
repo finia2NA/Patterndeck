@@ -21,6 +21,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
         route: req.path,
         endpoint: req.originalUrl,
         method: req.method,
+        app_session_id: req.appSessionId,
         status_code: err.statusCode,
         error_code: err.code,
       });
@@ -35,6 +36,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
     route: req.path,
     endpoint: req.originalUrl,
     method: req.method,
+    app_session_id: req.appSessionId,
     status_code: 500,
     error_code: 'INTERNAL_ERROR',
   });

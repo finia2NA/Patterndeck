@@ -162,7 +162,7 @@ async function callTextStream(
         } catch { /* malformed event */ }
       }
     }
-    reader.cancel().catch(() => {});
+    reader.cancel().catch(() => { });
 
     const latencyMs = Date.now() - startedAt;
     const cost = calcCost(model, state.inputTokens, state.outputTokens);
@@ -476,6 +476,26 @@ export async function generateCards(userId: string, topic: string, language: str
   );
 
   await recordUsage(userId, source, 'cards', HAIKU, cost);
+
+  captureAiGeneration(userId, {
+    ...analyticsContext,
+    endpoint: 'cards_qc',
+    traceId: `${analyticsContext?.traceId ?? defaultTraceId('cards', analyticsContext)}:qc`,
+    model: HAIKU,
+    source,
+    cost: 0,
+    success: true,
+    stream: false,
+    input: {
+      topic,
+      language,
+      requested_card_count: count,
+      explanation,
+    },
+    output: {
+      cards: result.cards,
+    },
+  });
 
   const cards: Card[] = result.cards.map((c, i) => ({ ...c, id: String(i) }));
   // Fisher-Yates shuffle

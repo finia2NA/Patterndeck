@@ -1,6 +1,7 @@
 import { ReactNode, useEffect } from 'react';
 import { Platform, Text, View } from 'react-native';
 import Constants from 'expo-constants';
+import * as Device from 'expo-device';
 import { usePathname } from 'expo-router';
 import { PostHog, PostHogErrorBoundary, PostHogProvider } from 'posthog-react-native';
 
@@ -9,6 +10,7 @@ type AnalyticsProperties = Record<string, any>;
 const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY;
 const posthogHost = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 const analyticsEnabled = process.env.EXPO_PUBLIC_ANALYTICS_ENABLED !== '0' && !!posthogKey;
+export const appSessionId = `app_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
 export const analyticsClient = analyticsEnabled
   ? new PostHog(posthogKey!, {
@@ -26,8 +28,20 @@ export const analyticsClient = analyticsEnabled
   : null;
 
 function commonProperties(): AnalyticsProperties {
+  let timezone: string | undefined;
+  try {
+    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    timezone = undefined;
+  }
+
   return {
     platform: Platform.OS,
+    app_session_id: appSessionId,
+    $session_id: appSessionId,
+    os_name: Device.osName,
+    os_version: Device.osVersion,
+    timezone,
     app_version: Constants.expoConfig?.version,
   };
 }

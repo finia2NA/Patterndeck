@@ -33,6 +33,7 @@ collectionsRouter.delete('/:id', async (req, res, next) => {
     await deleteNode(req.userId!, req.params.id);
     capture(req.userId!, deck ? 'deck_deleted' : 'collection_deleted', {
       deck_id: deck ? req.params.id : undefined,
+      app_session_id: req.appSessionId,
       deck_name: path?.split('::').pop(),
       deck_topic: deck?.topic,
       language: deck?.language,

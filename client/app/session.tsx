@@ -32,7 +32,7 @@ import {
 } from '@/components/session';
 import { SessionTopBar, TOPBAR_HEIGHT } from '@/components/session/SessionTopBar';
 import { useScreenSize } from '@/hooks/useScreenSize';
-import { analytics } from '@/lib/analytics';
+import { analytics, appSessionId } from '@/lib/analytics';
 
 const SIDEBAR_INITIAL_WIDTH = 320;
 
@@ -70,6 +70,7 @@ function QuickSession({ topic, language, cardCount }: { topic: string; language:
   const studySessionId = useRef(createStudySessionId()).current;
   const analyticsContext = useRef<AnalyticsContext>({
     studySessionId,
+    appSessionId,
     deckTopic: topic,
     language,
     studyMode: 'quick',
@@ -162,7 +163,7 @@ function DeckSession({
       overlayDecks={overlayDecks}
       decks={multi.decks}
       studyMode={studyMode}
-      analyticsBase={{ studySessionId, studyMode }}
+      analyticsBase={{ studySessionId, appSessionId, studyMode }}
     />
   );
 }

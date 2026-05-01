@@ -1,13 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../services/auth.service.js';
-import { prisma } from '../lib/prisma.js';
 import { AppError } from './errorHandler.js';
 
 declare global {
   namespace Express {
     interface Request {
       userId?: string;
-      userEmail?: string;
+      appSessionId?: string;
     }
   }
 }
@@ -22,9 +21,10 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     const token = header.slice(7);
     const { userId } = verifyToken(token);
     req.userId = userId;
-
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-    req.userEmail = user?.email ?? userId;
+    const appSessionId = req.headers['x-app-session-id'];
+    if (typeof appSessionId === 'string' && appSessionId.trim().length > 0) {
+      req.appSessionId = appSessionId.trim();
+    }
 
     next();
   } catch (e) {

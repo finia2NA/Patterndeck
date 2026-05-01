@@ -36,6 +36,7 @@ decksRouter.post('/', async (req, res, next) => {
       deck_id: nodeId,
       deck_name: String(path).split('::').pop()?.trim() ?? String(path),
       deck_topic: String(topic),
+      app_session_id: req.appSessionId,
       collection_path: String(path).split('::').slice(0, -1).join('::') || undefined,
       language: String(language),
       card_count: Number(cardCount ?? 0),
@@ -203,6 +204,7 @@ decksRouter.post('/import-csv', upload.single('file'), async (req, res, next) =>
 
     capture(req.userId!, failedCount > 0 ? 'import_failed' : 'deck_import_completed', {
       collection_path: basePath || undefined,
+      app_session_id: req.appSessionId,
       language: String(language),
       card_count: cardCount,
       import_rows: dataRowCount,
@@ -234,6 +236,7 @@ decksRouter.patch('/:nodeId', async (req, res, next) => {
 
     capture(req.userId!, 'deck_updated', {
       deck_id: req.params.nodeId,
+      app_session_id: req.appSessionId,
       deck_name: typeof name === 'string' ? name : undefined,
       deck_topic: typeof topic === 'string' ? topic : undefined,
       language: typeof language === 'string' ? language : undefined,
@@ -251,8 +254,18 @@ decksRouter.patch('/:nodeId', async (req, res, next) => {
 decksRouter.patch('/:nodeId/schedule', async (req, res, next) => {
   try {
     const { action, dueDate, clientTimezone } = req.body;
+    const before = await getDeck(req.userId!, req.params.nodeId);
     if (action === 'reset_never_studied') {
       await updateDeckSchedule(req.userId!, req.params.nodeId, { action: 'reset_never_studied' });
+      capture(req.userId!, 'deck_schedule_updated', {
+        deck_id: req.params.nodeId,
+        app_session_id: req.appSessionId,
+        deck_topic: before?.topic,
+        language: before?.language,
+        action: 'reset_never_studied',
+        previous_due_at: before?.dueAt,
+        previous_interval_days: before?.intervalDays,
+      });
       res.json({ success: true });
       return;
     }
@@ -262,6 +275,20 @@ decksRouter.patch('/:nodeId/schedule', async (req, res, next) => {
         action: 'set_due_date',
         dueDate: String(dueDate),
         clientTimezone: clientTimezone ? String(clientTimezone) : undefined,
+      });
+      const after = await getDeck(req.userId!, req.params.nodeId);
+      capture(req.userId!, 'deck_schedule_updated', {
+        deck_id: req.params.nodeId,
+        app_session_id: req.appSessionId,
+        deck_topic: after?.topic ?? before?.topic,
+        language: after?.language ?? before?.language,
+        action: 'set_due_date',
+        due_date: String(dueDate),
+        client_timezone: clientTimezone ? String(clientTimezone) : undefined,
+        previous_due_at: before?.dueAt,
+        next_due_at: after?.dueAt,
+        previous_interval_days: before?.intervalDays,
+        next_interval_days: after?.intervalDays,
       });
       res.json({ success: true });
       return;
@@ -294,9 +321,11 @@ decksRouter.post('/:nodeId/review', async (req, res, next) => {
     const resolvedStudyMode = studyMode === 'early' ? 'early' : 'scheduled';
     const stars = Math.max(1, Math.min(5, Math.round(Number(userStars)))) as 1 | 2 | 3 | 4 | 5;
     const deck = await getDeck(req.userId!, req.params.nodeId);
+    const dueAgeHours = deck?.dueAt ? Math.max(0, Date.now() - deck.dueAt) / 36e5 : null;
     const result = await saveDeckReview(req.userId!, req.params.nodeId, stars, Number(aiStars), String(aiRecap), resolvedStudyMode);
     capture(req.userId!, 'deck_review_submitted', {
       deck_id: req.params.nodeId,
+      app_session_id: req.appSessionId,
       study_session_id: typeof studySessionId === 'string' ? studySessionId : undefined,
       deck_topic: deck?.topic,
       language: deck?.language,
@@ -308,6 +337,8 @@ decksRouter.post('/:nodeId/review', async (req, res, next) => {
       interval_before_days: deck?.intervalDays,
       interval_after_days: result.nextIntervalDays,
       was_due_when_studied: deck?.isDue,
+      due_age_hours: dueAgeHours,
+      due_bucket: dueAgeHours === null ? 'not_started' : dueAgeHours >= 24 * 7 ? 'week_plus' : dueAgeHours >= 24 ? 'day_plus' : dueAgeHours > 0 ? 'same_day' : 'not_due',
     });
     res.json(result);
   } catch (e) { next(e); }
@@ -322,6 +353,7 @@ decksRouter.delete('/:nodeId', async (req, res, next) => {
     await deleteNode(req.userId!, req.params.nodeId);
     capture(req.userId!, 'deck_deleted', {
       deck_id: req.params.nodeId,
+      app_session_id: req.appSessionId,
       deck_name: path?.split('::').pop(),
       deck_topic: deck?.topic,
       language: deck?.language,
