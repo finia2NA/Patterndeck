@@ -9,6 +9,7 @@ import { ColorsContext, darkThemeVars, lightThemeVars, dark, light } from '@/con
 import { getMe, hydrateSettings } from '@/lib/api';
 import { AnalyticsProvider, analytics } from '@/lib/analytics';
 import { getAuthToken, setUserId } from '@/lib/storage';
+import { syncPushDeviceRegistrationIfEnabled } from '@/lib/notifications';
 
 export default function RootLayout() {
   const scheme = useColorScheme();
@@ -31,7 +32,9 @@ export default function RootLayout() {
       .catch(error => analytics.captureException(error, { route: 'root_layout', action: 'identify_current_user' }))
       .finally(() => analytics.track('app_opened'));
 
-    hydrateSettings().catch(() => {});
+    hydrateSettings()
+      .then(() => syncPushDeviceRegistrationIfEnabled())
+      .catch(() => {});
 
     if (Platform.OS === 'web') {
       const loader = document.getElementById('gc-loader');

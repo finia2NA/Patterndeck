@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Switch,
 } from 'react-native';
 import { useColors } from '@/constants/theme';
 import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
@@ -17,6 +18,7 @@ import type { CardCount } from '@/constants/session';
 import { LanguagePicker } from '@/components/home/LanguagePicker';
 import { PageSheetModal } from '@/components/PageSheetModal';
 import { platformAlert } from '@/lib/platformAlert';
+import { registerCurrentPushDevice, unregisterCurrentPushDevice } from '@/lib/notifications';
 import { AnimatedCollapsible } from '@/components/AnimatedCollapsible';
 import { TouchTarget } from '@/components/TouchTarget';
 import { TimePicker } from '@/components/pickers/TimePicker';
@@ -48,11 +50,14 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [feedbackBrevity, setFeedbackBrevity] = useState<'brief' | 'normal'>('normal');
   const [defaultCardCount, setDefaultCardCount] = useState<CardCount>(10);
   const [dailyDueTime, setDailyDueTime] = useState('01:00');
+  const [notificationsEnabled, setNotificationsEnabled] = useState<'on' | 'off'>('off');
+  const [notificationTime, setNotificationTime] = useState('09:00');
   const [enabledLanguages, setEnabledLanguages] = useState<string[]>(DEFAULT_LANGUAGES);
   const [usageStatus, setUsageStatus] = useState<UsageStatus | null>(null);
   const [showAddKey, setShowAddKey] = useState(false);
   const [languagesExpanded, setLanguagesExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [notificationSetupBusy, setNotificationSetupBusy] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,6 +81,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       const n = settings.default_card_count ? parseInt(settings.default_card_count, 10) : 10;
       setDefaultCardCount(CARD_COUNTS.includes(n as CardCount) && n !== 0 ? n as CardCount : 10);
       setDailyDueTime(normalizeTime(settings.daily_due_time));
+      setNotificationsEnabled(settings.notifications_enabled === 'on' ? 'on' : 'off');
+      setNotificationTime(normalizeTime(settings.notification_time ?? '09:00'));
       setEnabledLanguages(parseEnabledLanguages(settings.enabled_languages ?? null, DEFAULT_LANGUAGES));
     });
 
@@ -96,6 +103,25 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     setUsageStatus({ ...usageStatus, preference: next });
   }
 
+  async function handleNotificationsToggle(enabled: boolean) {
+    if (!enabled) {
+      setNotificationsEnabled('off');
+      return;
+    }
+
+    setNotificationSetupBusy(true);
+    try {
+      await registerCurrentPushDevice();
+      setNotificationsEnabled('on');
+    } catch (e) {
+      setNotificationsEnabled('off');
+      const message = e instanceof Error ? e.message : 'Unable to enable notifications.';
+      platformAlert('Notifications unavailable', message);
+    } finally {
+      setNotificationSetupBusy(false);
+    }
+  }
+
   async function handleDone() {
     const nextSettings = {
       ...getSettingsSnapshot(),
@@ -104,6 +130,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       feedback_brevity: feedbackBrevity,
       default_card_count: String(defaultCardCount),
       daily_due_time: normalizeTime(dailyDueTime),
+      notifications_enabled: notificationsEnabled,
+      notification_time: normalizeTime(notificationTime),
       api_key_preference: usageStatus?.preference ?? getSettingsSnapshot().api_key_preference ?? 'central',
       enabled_languages: JSON.stringify(enabledLanguages),
     };
@@ -111,6 +139,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     setSaving(true);
     try {
       await saveSettings(nextSettings);
+      if (notificationsEnabled === 'off') {
+        await unregisterCurrentPushDevice().catch(() => {});
+      }
       onClose();
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to save settings.';
@@ -121,6 +152,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   }
 
   async function handleLogout() {
+    await unregisterCurrentPushDevice().catch(() => {});
     await clearAuthToken();
     await clearUserId();
     await clearUserEmail();
@@ -210,6 +242,32 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
           description="When decks become due each day"
         >
           <TimePicker value={dailyDueTime} onChange={(next: string) => setDailyDueTime(normalizeTime(next))} />
+        </SettingsRow>
+      </SectionCard>
+
+      {/* Notifications */}
+      <SectionCard title="Notifications">
+        <SettingsRow
+          label="Due Deck Reminders"
+          description="Send a mobile reminder when decks are ready to review"
+        >
+          <Switch
+            value={notificationsEnabled === 'on'}
+            onValueChange={handleNotificationsToggle}
+            disabled={saving || notificationSetupBusy}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.surface}
+          />
+        </SettingsRow>
+        <SettingsRow
+          label="Reminder Time"
+          description="When to notify you, separate from the due release time"
+        >
+          <TimePicker
+            value={notificationTime}
+            onChange={(next: string) => setNotificationTime(normalizeTime(next))}
+            disabled={notificationsEnabled !== 'on'}
+          />
         </SettingsRow>
       </SectionCard>
 

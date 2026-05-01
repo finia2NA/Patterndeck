@@ -30,6 +30,7 @@ interface ExpoPushMessage {
   title: string;
   body: string;
   sound: 'default';
+  channelId: string;
   data: Record<string, string | number | boolean>;
 }
 
@@ -358,6 +359,7 @@ async function sendDueDeckPushes(
     title: 'Decks are due',
     body,
     sound: 'default',
+    channelId: 'due-decks',
     data: {
       type: 'due_decks',
       dueDeckCount,

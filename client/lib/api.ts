@@ -418,6 +418,22 @@ export async function getUsageStatus() {
   return request<UsageStatus>('/settings/usage-status');
 }
 
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+export async function registerPushDevice(expoPushToken: string, platform: string) {
+  return request<{ success: boolean }>('/notifications/register', {
+    method: 'POST',
+    body: JSON.stringify({ expoPushToken, platform }),
+  });
+}
+
+export async function unregisterPushDevice(expoPushToken?: string) {
+  return request<{ success: boolean }>('/notifications/unregister', {
+    method: 'POST',
+    body: JSON.stringify(expoPushToken ? { expoPushToken } : {}),
+  });
+}
+
 // ─── AI (non-streaming) ──────────────────────────────────────────────────────
 
 export async function generateCards(topic: string, language: string, count: number, explanation: string, analyticsContext?: AnalyticsContext) {

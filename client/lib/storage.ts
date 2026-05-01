@@ -7,6 +7,7 @@ const KEYS = {
   ONBOARDING_COMPLETE: 'onboarding_complete',
   COLLAPSED_NODES: 'collapsed_nodes',
   BACKEND_BASE_URL: 'backend_base_url',
+  REGISTERED_EXPO_PUSH_TOKEN: 'registered_expo_push_token',
 } as const;
 
 export async function getAuthToken(): Promise<string | null> {
@@ -78,4 +79,16 @@ export async function setBackendBaseUrl(url: string): Promise<void> {
 
 export async function clearBackendBaseUrl(): Promise<void> {
   await AsyncStorage.removeItem(KEYS.BACKEND_BASE_URL);
+}
+
+export async function getRegisteredExpoPushToken(): Promise<string | null> {
+  return AsyncStorage.getItem(KEYS.REGISTERED_EXPO_PUSH_TOKEN);
+}
+
+export async function setRegisteredExpoPushToken(token: string): Promise<void> {
+  await AsyncStorage.setItem(KEYS.REGISTERED_EXPO_PUSH_TOKEN, token);
+}
+
+export async function clearRegisteredExpoPushToken(): Promise<void> {
+  await AsyncStorage.removeItem(KEYS.REGISTERED_EXPO_PUSH_TOKEN);
 }
