@@ -29,7 +29,7 @@ async function getNextSortOrder(userId: string, parentId: string | null): Promis
 }
 
 function mapDeckRow(deck: {
-  nodeId: string; topic: string; language: string;
+  nodeId: string; topic: string; clarification: string | null; language: string;
   explanation: string | null; explanationStatus: string;
   cardCount: number; lastStudiedAt: Date | null;
   dueAt: Date | null; intervalDays: number;
@@ -38,6 +38,7 @@ function mapDeckRow(deck: {
   return {
     nodeId: deck.nodeId,
     topic: deck.topic,
+    clarification: deck.clarification,
     language: deck.language,
     explanation: deck.explanation,
     explanationStatus: deck.explanationStatus as DeckData['explanationStatus'],
@@ -57,6 +58,7 @@ export async function createDeckFromPath(
   topic: string,
   language: string,
   cardCount = 0,
+  clarification?: string,
   explanation?: string,
 ): Promise<string> {
   const segments = path.split('::').map(s => s.trim()).filter(Boolean);
@@ -95,6 +97,7 @@ export async function createDeckFromPath(
       deck: {
         create: {
           topic,
+          clarification: clarification?.trim() ? clarification : null,
           language,
           cardCount,
           ...(explanation !== undefined ? { explanation, explanationStatus: 'ready' } : {}),
@@ -123,7 +126,7 @@ export async function getDeck(userId: string, nodeId: string): Promise<DeckData 
 export async function updateDeck(
   userId: string,
   nodeId: string,
-  updates: { name?: string; topic?: string; language?: string; cardCount?: number; explanation?: string },
+  updates: { name?: string; topic?: string; clarification?: string | null; language?: string; cardCount?: number; explanation?: string },
 ): Promise<{ regenerateExplanation: boolean }> {
   const node = await prisma.node.findFirst({
     where: { id: nodeId, userId },
@@ -137,16 +140,25 @@ export async function updateDeck(
     await prisma.node.update({ where: { id: nodeId }, data: { name: updates.name } });
   }
 
-  if (updates.topic !== undefined || updates.language !== undefined || updates.cardCount !== undefined) {
+  if (
+    updates.topic !== undefined ||
+    updates.clarification !== undefined ||
+    updates.language !== undefined ||
+    updates.cardCount !== undefined
+  ) {
     const newTopic = updates.topic ?? node.deck.topic;
+    const newClarification = updates.clarification !== undefined
+      ? (updates.clarification?.trim() ? updates.clarification : null)
+      : node.deck.clarification;
     const newLang = updates.language ?? node.deck.language;
     const newCount = updates.cardCount ?? node.deck.cardCount;
-    regenerate = newTopic !== node.deck.topic || newLang !== node.deck.language;
+    regenerate = newTopic !== node.deck.topic || newClarification !== node.deck.clarification || newLang !== node.deck.language;
 
     await prisma.deck.update({
       where: { nodeId },
       data: {
         topic: newTopic,
+        clarification: newClarification,
         language: newLang,
         cardCount: newCount,
         ...(regenerate

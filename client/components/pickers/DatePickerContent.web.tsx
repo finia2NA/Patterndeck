@@ -58,6 +58,8 @@ export function DatePickerContent({
         selected={draftDate ?? undefined}
         onMonthChange={onMonthChange}
         captionLayout="dropdown"
+        startMonth={new Date(new Date().getFullYear() - 5, 0)}
+        endMonth={new Date(new Date().getFullYear() + 5, 11)}
         onSelect={(next) => {
           if (!next) return;
           onDraftDateChange(next);

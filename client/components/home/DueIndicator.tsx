@@ -18,14 +18,12 @@ export function DueIndicator({ dueAt, isDue }: { dueAt: number | null; isDue: bo
 
   const color = isDue ? colors.error : colors.success;
   const icon = isDue ? 'clock' : 'check';
-  const label = diffDays === 0 ? '' : `${Math.abs(diffDays)}d`;
+  const label = diffDays === 0 ? 'today' : `${Math.abs(diffDays)}d`;
 
   return (
     <View style={{ width: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
       <Icon name={icon} size={12} color={color} />
-      {label !== '' && (
-        <Text style={{ color, fontSize: 10, fontVariant: ['tabular-nums'] }}>{label}</Text>
-      )}
+      <Text style={{ color, fontSize: 10, fontVariant: ['tabular-nums'] }}>{label}</Text>
     </View>
   );
 }

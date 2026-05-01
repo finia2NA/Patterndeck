@@ -14,6 +14,7 @@ export type ExplanationStatus = 'pending' | 'generating' | 'ready' | 'error';
 export interface DeckData {
   nodeId: string;
   topic: string;
+  clarification: string | null;
   language: string;
   explanation: string | null;
   explanationStatus: ExplanationStatus;

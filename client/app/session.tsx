@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '@/constants/theme';
+import { Colors, useColors } from '@/constants/theme';
 import { createDeckFromPath } from '@/lib/api';
 import type { Card, DeckCard } from '@/lib/types';
 import type { CardCount } from '@/constants/session';
@@ -119,6 +119,7 @@ function DeckSession({
 
   const overlayDecks: OverlayDeck[] = Array.from(multi.decks.entries()).map(([, info]) => ({
     topic: info.topic,
+    clarification: info.clarification,
     deckName: info.deckName,
     explanation: info.explanation,
     wasTruncated: info.wasTruncated,
@@ -137,6 +138,7 @@ function DeckSession({
       explanation={displayDeck?.explanation ?? ''}
       wasTruncated={displayDeck?.wasTruncated ?? false}
       topic={displayDeck?.topic ?? ''}
+      clarification={displayDeck?.clarification ?? null}
       language={language}
       showExplanationOverlay
       markStudied={multi.markStudied}
@@ -162,6 +164,7 @@ interface SessionUIProps {
   explanation: string;
   wasTruncated: boolean;
   topic: string;
+  clarification?: string | null;
   language: string;
   showExplanationOverlay: boolean;
   markStudied: () => Promise<void>;
@@ -175,13 +178,14 @@ interface SessionUIProps {
 function SessionUI({
   loading, loadPhase, loadError, setLoadError,
   cards, setCards, totalCost, addCost,
-  explanation, wasTruncated, topic, language,
+  explanation, wasTruncated, topic, clarification, language,
   showExplanationOverlay, markStudied, deckName, overlayDecks, decks, studyMode = 'scheduled',
   quickStudyCardCount,
 }: SessionUIProps) {
   const router = useRouter();
   const { isSmallScreen } = useScreenSize();
   const insets = useSafeAreaInsets();
+  const colors = useColors();
 
   const [showOverlay, setShowOverlay] = useState(showExplanationOverlay);
   const [panelNarrowed, setPanelNarrowed] = useState(false);
@@ -245,6 +249,7 @@ function SessionUI({
     const quickDeckInitialData = {
       path: '',
       topic,
+      clarification: '',
       language,
       cardCount: (quickStudyCardCount ?? 0) as CardCount,
       dueDate: '',
@@ -266,7 +271,7 @@ function SessionUI({
             visible={quickDeckModalVisible}
             onClose={() => setQuickDeckModalVisible(false)}
             onSubmit={async (data: DeckFormData) => {
-              await createDeckFromPath(data.path, data.topic, data.language, data.cardCount, data.explanation);
+              await createDeckFromPath(data.path, data.topic, data.language, data.cardCount, data.clarification, data.explanation);
               setQuickDeckCreated(true);
               setQuickDeckModalVisible(false);
             }}
@@ -313,7 +318,7 @@ function SessionUI({
       {isSmallScreen ? (
         showOverlay ? (
           <ExplanationOverlay
-            topic={topic} explanation={explanation} wasTruncated={wasTruncated}
+            topic={topic} clarification={clarification} explanation={explanation} wasTruncated={wasTruncated}
             loading={loading} loadPhase={loadPhase}
             onStart={() => setShowOverlay(false)} onBack={handleBack} insets={insets}
             allDecks={overlayDecks}
@@ -356,7 +361,7 @@ function SessionUI({
         >
           <View className="flex-1 flex-row bg-background">
             {!showOverlay ? (
-                <SidePanel explanation={explanation} wasTruncated={wasTruncated} />
+                <SidePanel topic={topic} clarification={clarification} explanation={explanation} wasTruncated={wasTruncated} />
             ) : (
               <View style={[
                 { overflow: 'hidden' as const },
@@ -365,7 +370,7 @@ function SessionUI({
                   : { width: panelNarrowed ? SIDEBAR_INITIAL_WIDTH : '100%' },
               ]}>
                 <ExplanationOverlay
-                  topic={topic} explanation={explanation} wasTruncated={wasTruncated}
+                  topic={topic} clarification={clarification} explanation={explanation} wasTruncated={wasTruncated}
                   loading={loading} loadPhase={loadPhase}
                   onStart={handleStartPractising} onBack={handleBack} insets={insets}
                   allDecks={overlayDecks}
@@ -389,7 +394,7 @@ function SessionUI({
         </KeyboardAvoidingView>
       )}
       {isSmallScreen && !showOverlay && (
-        <BottomSheet explanation={explanation} wasTruncated={wasTruncated} />
+        <BottomSheet topic={topic} clarification={clarification} explanation={explanation} wasTruncated={wasTruncated} />
       )}
 
       {/* Back button + info strip (wide screens only) */}
@@ -397,8 +402,7 @@ function SessionUI({
         <>
           <TouchableOpacity
             onPress={handleBack}
-            style={{ position: 'absolute', top: insets.top + 8, left: 16, zIndex: 50 }}
-            className="w-10 h-10 items-center justify-center rounded-full bg-surface/80"
+            style={{ position: 'absolute', top: insets.top + 8, left: 16, zIndex: 50, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 9999, backgroundColor: colors.surface + 'CC' }}
             activeOpacity={0.7}
           >
             <Text className="text-foreground text-base font-semibold">←</Text>

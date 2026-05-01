@@ -156,6 +156,7 @@ export default function Home() {
           await updateDeck(editNode.id, {
             name: pathChanged ? undefined : newName,
             topic: data.topic,
+            clarification: data.clarification,
             language: data.language,
             cardCount: data.cardCount,
             explanation: data.explanation,
@@ -174,7 +175,7 @@ export default function Home() {
           }
         }
       } else {
-        await createDeckFromPath(data.path, data.topic, data.language, data.cardCount, data.explanation);
+        await createDeckFromPath(data.path, data.topic, data.language, data.cardCount, data.clarification, data.explanation);
       }
       setDeckModalVisible(false);
       setEditNode(null);

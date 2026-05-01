@@ -1,4 +1,4 @@
-import { useRef, type RefObject } from 'react';
+import { useRef, useState, type RefObject } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Platform, Alert } from 'react-native';
 import { useColors } from '@/constants/theme';
 import type { Language, CardCount } from '@/constants/session';
@@ -6,6 +6,7 @@ import { SharedCreationNameField, SharedCreationOptionsSection } from './DeckMod
 import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
 import { DatePicker } from '@/components/pickers/DatePicker';
 import { usePageSheetScrolling } from '@/components/PageSheetScrollContext';
+import { AnimatedCollapsible } from '@/components/AnimatedCollapsible';
 
 interface DeckModalCreateTabProps {
   isCollection: boolean;
@@ -20,6 +21,8 @@ interface DeckModalCreateTabProps {
   onNameChange: (value: string) => void;
   topic: string;
   onTopicChange: (value: string) => void;
+  clarification: string;
+  onClarificationChange: (value: string) => void;
   explanation: string;
   onExplanationChange: (value: string) => void;
   showExplanationField: boolean;
@@ -43,6 +46,8 @@ export function DeckModalCreateTab({
   onNameChange,
   topic,
   onTopicChange,
+  clarification,
+  onClarificationChange,
   explanation,
   onExplanationChange,
   showExplanationField,
@@ -55,7 +60,9 @@ export function DeckModalCreateTab({
   const colors = useColors();
   const isScrollingRef = usePageSheetScrolling();
   const topicRef = useRef<TextInput>(null);
+  const clarificationRef = useRef<TextInput>(null);
   const explanationRef = useRef<TextInput>(null);
+  const [explanationExpanded, setExplanationExpanded] = useState(false);
 
   function handleScrollAwareFocus(ref: RefObject<TextInput | null>) {
     if (Platform.OS !== 'web' && isScrollingRef?.current) {
@@ -112,9 +119,9 @@ export function DeckModalCreateTab({
 
       {!isCollection && (
         <>
-          <Text className="text-foreground/80 text-sm font-medium mb-2">Topic / Prompt</Text>
+          <Text className="text-foreground/80 text-sm font-medium mb-2">Topic</Text>
           <Text className="text-foreground-secondary text-xs mb-2">
-            Describe the grammar topic to study. This is sent to Claude to generate the explanation.
+            Name the grammar topic to study.
           </Text>
           <TextInput
             ref={topicRef}
@@ -128,6 +135,55 @@ export function DeckModalCreateTab({
             onFocus={() => handleScrollAwareFocus(topicRef)}
           />
 
+          <Text className="text-foreground/80 text-sm font-medium mb-2">Clarification</Text>
+          <Text className="text-foreground-secondary text-xs mb-2">
+            Add extra guidance for explanation generation.
+          </Text>
+          <TextInput
+            ref={clarificationRef}
+            className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm mb-6"
+            placeholder="What should the explanation include or keep in mind?"
+            placeholderTextColor={colors.foreground_muted}
+            value={clarification}
+            onChangeText={onClarificationChange}
+            multiline
+            style={{ minHeight: 110, textAlignVertical: 'top' }}
+            onFocus={() => handleScrollAwareFocus(clarificationRef)}
+          />
+
+          {showExplanationField && (
+            <View className="mb-6 rounded-xl border border-border bg-background-muted overflow-hidden">
+              <TouchableOpacity
+                className="px-4 py-3 flex-row items-center justify-between"
+                onPress={() => setExplanationExpanded(v => !v)}
+                activeOpacity={0.85}
+              >
+                <View className="flex-1 pr-3">
+                  <Text className="text-foreground/80 text-sm font-medium">AI-generated Explanation</Text>
+                  <Text className="text-foreground-secondary text-xs mt-1">
+                    Markdown saved with this deck.
+                  </Text>
+                </View>
+                <Text className="text-foreground-secondary text-sm">{explanationExpanded ? '▼' : '▶'}</Text>
+              </TouchableOpacity>
+              <AnimatedCollapsible expanded={explanationExpanded} keepMounted>
+                <View className="px-4 pb-4">
+                  <TextInput
+                    ref={explanationRef}
+                    className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm"
+                    placeholder="Generated explanation"
+                    placeholderTextColor={colors.foreground_muted}
+                    value={explanation}
+                    onChangeText={onExplanationChange}
+                    multiline
+                    style={{ minHeight: 160, textAlignVertical: 'top' }}
+                    onFocus={() => handleScrollAwareFocus(explanationRef)}
+                  />
+                </View>
+              </AnimatedCollapsible>
+            </View>
+          )}
+
           <SharedCreationOptionsSection
             language={language}
             onLanguageChange={onLanguageChange}
@@ -135,26 +191,6 @@ export function DeckModalCreateTab({
             onCardCountChange={onCardCountChange}
             enabledLanguages={enabledLanguages}
           />
-
-          {showExplanationField && (
-            <>
-              <Text className="text-foreground/80 text-sm font-medium mb-2">Explanation</Text>
-              <Text className="text-foreground-secondary text-xs mb-2">
-                Markdown saved with this deck.
-              </Text>
-              <TextInput
-                ref={explanationRef}
-                className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm mb-6"
-                placeholder="Generated explanation"
-                placeholderTextColor={colors.foreground_muted}
-                value={explanation}
-                onChangeText={onExplanationChange}
-                multiline
-                style={{ minHeight: 160, textAlignVertical: 'top' }}
-                onFocus={() => handleScrollAwareFocus(explanationRef)}
-              />
-            </>
-          )}
         </>
       )}
 

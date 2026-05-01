@@ -9,6 +9,7 @@ import { sseHeaders, sendChunk, sendDone, sendError } from '../lib/sse.js';
 import { AppError } from '../middleware/errorHandler.js';
 import {
   EXPLANATION_PROMPT,
+  DECK_EXPLANATION_PROMPT,
   CARD_GEN_PROMPT,
   JUDGMENT_PROMPT,
   REJECTION_PROMPT,
@@ -200,7 +201,7 @@ async function runExplanation(userId: string, deckId: string, version: number): 
   try {
     const { cost } = await callTextStream(
       apiKey, SONNET,
-      EXPLANATION_PROMPT(deck.topic, deck.language),
+      DECK_EXPLANATION_PROMPT(deck.topic, deck.language, deck.clarification),
       [{ role: 'user', content: 'Please explain the grammar topic for my study session.' }],
       4096,
       (chunk) => { fullText += chunk; },
@@ -235,7 +236,7 @@ export async function streamExplanation(req: Request, res: Response, userId: str
   try {
     const { wasTruncated, cost } = await callTextStream(
       apiKey, SONNET,
-      EXPLANATION_PROMPT(deck.topic, deck.language),
+      DECK_EXPLANATION_PROMPT(deck.topic, deck.language, deck.clarification),
       [{ role: 'user', content: 'Please explain the grammar topic for my study session.' }],
       4096,
       (chunk) => {

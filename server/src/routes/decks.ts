@@ -14,14 +14,17 @@ decksRouter.use(requireAuth);
 
 decksRouter.post('/', async (req, res, next) => {
   try {
-    const { path, topic, language, cardCount, explanation } = req.body;
+    const { path, topic, clarification, language, cardCount, explanation } = req.body;
     if (!path || !topic || !language) {
       throw new AppError(400, 'MISSING_FIELDS', 'path, topic, and language are required.');
     }
     const existingExplanation = typeof explanation === 'string' && explanation.trim().length > 0
       ? explanation
       : undefined;
-    const nodeId = await createDeckFromPath(req.userId!, path, topic, language, cardCount, existingExplanation);
+    const deckClarification = typeof clarification === 'string' && clarification.trim().length > 0
+      ? clarification
+      : undefined;
+    const nodeId = await createDeckFromPath(req.userId!, path, topic, language, cardCount, deckClarification, existingExplanation);
 
     if (existingExplanation === undefined) {
       enqueueExplanation(req.userId!, nodeId);
@@ -36,6 +39,7 @@ decksRouter.post('/', async (req, res, next) => {
 interface CsvRow {
   deckName: string;
   topic: string;
+  clarification: string;
   explanation: string;
   lineNumber: number;
   rawLine: string;
@@ -54,7 +58,8 @@ function normalize(s: string): string {
 const HEADER_VARIANTS: Record<string, string[]> = {
   topic:       ['topic'],
   deckname:    ['deckname', 'name', 'deck'],
-  explanation: ['explanation', 'description', 'details', 'notes'],
+  clarification: ['clarification', 'description', 'details', 'notes'],
+  explanation: ['explanation'],
 };
 
 function matchHeader(field: string): string | null {
@@ -84,18 +89,21 @@ function parseCsv(raw: string): { rows: CsvRow[]; skipped: CsvSkip[]; dataRowCou
 
   let topicIdx = 1;
   let nameIdx = 0;
-  let explIdx = 2;
+  let clarificationIdx = 2;
+  let explIdx = 3;
   let dataStart = 0;
 
   if (hasHeader) {
     dataStart = 1;
     topicIdx = -1;
     nameIdx = -1;
+    clarificationIdx = -1;
     explIdx = -1;
     for (let i = 0; i < firstFields.length; i++) {
       const match = matchHeader(firstFields[i]);
       if (match === 'topic') topicIdx = i;
       else if (match === 'deckname') nameIdx = i;
+      else if (match === 'clarification') clarificationIdx = i;
       else if (match === 'explanation') explIdx = i;
     }
     if (topicIdx === -1) {
@@ -117,8 +125,9 @@ function parseCsv(raw: string): { rows: CsvRow[]; skipped: CsvSkip[]; dataRowCou
       continue;
     }
     const deckName = unescape((nameIdx >= 0 ? fields[nameIdx] ?? '' : '').trim() || topic);
+    const clarification = unescape((clarificationIdx >= 0 ? fields[clarificationIdx] ?? '' : '').trim());
     const explanation = unescape((explIdx >= 0 ? fields[explIdx] ?? '' : '').trim());
-    rows.push({ deckName, topic, explanation, lineNumber, rawLine: text });
+    rows.push({ deckName, topic, clarification, explanation, lineNumber, rawLine: text });
   }
 
   return { rows, skipped, dataRowCount };
@@ -156,13 +165,16 @@ decksRouter.post('/import-csv', upload.single('file'), async (req, res, next) =>
 
     for (const row of rows) {
       const deckPath = basePath ? `${basePath}::${row.deckName}` : row.deckName;
-      const promptMaterial = row.explanation ? `${row.topic}\n\n${row.explanation}` : row.topic;
+      const clarification = row.clarification.trim().length > 0 ? row.clarification : undefined;
+      const existingExplanation = row.explanation.trim().length > 0 ? row.explanation : undefined;
 
       try {
-        const nodeId = await createDeckFromPath(userId, deckPath, promptMaterial, language, cardCount);
+        const nodeId = await createDeckFromPath(userId, deckPath, row.topic, language, cardCount, clarification, existingExplanation);
         createdCount++;
-        enqueueExplanation(userId, nodeId);
-        queuedCount++;
+        if (existingExplanation === undefined) {
+          enqueueExplanation(userId, nodeId);
+          queuedCount++;
+        }
       } catch (e: any) {
         failures.push({
           line: row.lineNumber,
@@ -189,8 +201,8 @@ decksRouter.get('/:nodeId', async (req, res, next) => {
 
 decksRouter.patch('/:nodeId', async (req, res, next) => {
   try {
-    const { name, topic, language, cardCount, explanation } = req.body;
-    const result = await updateDeck(req.userId!, req.params.nodeId, { name, topic, language, cardCount, explanation });
+    const { name, topic, clarification, language, cardCount, explanation } = req.body;
+    const result = await updateDeck(req.userId!, req.params.nodeId, { name, topic, clarification, language, cardCount, explanation });
 
     if (result.regenerateExplanation) {
       enqueueExplanation(req.userId!, req.params.nodeId);

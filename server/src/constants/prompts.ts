@@ -23,6 +23,14 @@ Use concrete ${language} examples with English translations where helpful.
 Format your response in Markdown. Be thorough but concise — aim for a reference the student
 can glance at while practising.${explanationLanguageBlock(language)}`;
 
+export const DECK_EXPLANATION_PROMPT = (topic: string, language: string, clarification?: string | null) => `\
+You are an expert ${language} language teacher. The student wants to study: "${topic}".
+${clarification?.trim() ? `\nAdditional guidance from the deck author:\n---\n${clarification.trim()}\n---\n` : ''}
+Write a clear, well-structured grammar explanation covering the relevant grammar points.
+Use concrete ${language} examples with English translations where helpful.
+Format your response in Markdown. Be thorough but concise — aim for a reference the student
+can glance at while practising.${explanationLanguageBlock(language)}`;
+
 export const CARD_GEN_PROMPT = (
   topic: string,
   language: string,

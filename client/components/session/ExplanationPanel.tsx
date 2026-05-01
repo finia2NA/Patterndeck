@@ -29,7 +29,17 @@ export function TruncationWarning() {
 
 // ─── Side panel (large screens) ──────────────────────────────────────────────
 
-export function SidePanel({ explanation, wasTruncated }: { explanation: string; wasTruncated: boolean }) {
+export function SidePanel({
+  topic,
+  clarification,
+  explanation,
+  wasTruncated,
+}: {
+  topic: string;
+  clarification?: string | null;
+  explanation: string;
+  wasTruncated: boolean;
+}) {
   const insets = useSafeAreaInsets();
   const c = useColors();
   const [width, setWidth] = useState(320);
@@ -90,6 +100,16 @@ export function SidePanel({ explanation, wasTruncated }: { explanation: string; 
           <Text className="text-foreground-secondary text-xs font-semibold uppercase tracking-widest mb-3">
             Grammar Reference
           </Text>
+          {!!topic.trim() && (
+            <Text className={`text-foreground text-xl font-bold ${clarification?.trim() ? 'mb-2' : 'mb-5'}`}>
+              {topic.trim()}
+            </Text>
+          )}
+          {!!clarification?.trim() && (
+            <Text className="text-foreground-secondary text-sm italic leading-5 mb-5">
+              {clarification.trim()}
+            </Text>
+          )}
           <GrammarMarkdown>{explanation}</GrammarMarkdown>
           {wasTruncated && <TruncationWarning />}
         </ScrollView>
@@ -125,7 +145,17 @@ export function SidePanel({ explanation, wasTruncated }: { explanation: string; 
 
 // ─── Bottom sheet (small screens) ─────────────────────────────────────────────
 
-export function BottomSheet({ explanation, wasTruncated }: { explanation: string; wasTruncated: boolean }) {
+export function BottomSheet({
+  topic,
+  clarification,
+  explanation,
+  wasTruncated,
+}: {
+  topic: string;
+  clarification?: string | null;
+  explanation: string;
+  wasTruncated: boolean;
+}) {
   const c = useColors();
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -202,9 +232,21 @@ export function BottomSheet({ explanation, wasTruncated }: { explanation: string
           <View className="w-10 h-1 bg-border rounded-full" />
         </TouchableOpacity>
         <View className="flex-row items-center justify-between px-5 pb-2">
-          <Text className="text-foreground-secondary text-xs font-semibold uppercase tracking-widest">
-            Grammar Reference
-          </Text>
+          <View className="flex-1 pr-3">
+            <Text className="text-foreground-secondary text-xs font-semibold uppercase tracking-widest">
+              Grammar Reference
+            </Text>
+            {!!topic.trim() && (
+              <Text className="text-foreground text-sm font-semibold mt-1" numberOfLines={1}>
+                {topic.trim()}
+              </Text>
+            )}
+            {!!clarification?.trim() && (
+              <Text className="text-foreground-secondary text-xs italic mt-0.5" numberOfLines={2}>
+                {clarification.trim()}
+              </Text>
+            )}
+          </View>
           {expanded && (
             <TouchTarget onPress={() => snapTo(false)} style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
               <Text className="text-foreground-secondary text-xs">↓ Dismiss</Text>
@@ -219,6 +261,16 @@ export function BottomSheet({ explanation, wasTruncated }: { explanation: string
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
       >
+        {expanded && !!topic.trim() && (
+          <Text className={`text-foreground text-xl font-bold ${clarification?.trim() ? 'mb-2' : 'mb-5'}`}>
+            {topic.trim()}
+          </Text>
+        )}
+        {expanded && !!clarification?.trim() && (
+          <Text className="text-foreground-secondary text-sm italic leading-5 mb-5">
+            {clarification.trim()}
+          </Text>
+        )}
         <GrammarMarkdown>{explanation}</GrammarMarkdown>
         {wasTruncated && <TruncationWarning />}
       </ScrollView>

@@ -55,6 +55,7 @@ model Node {
 model Deck {
   nodeId            String @id
   topic             String
+  clarification     String?
   language          String
   explanation       String?
   explanationStatus String @default("pending")

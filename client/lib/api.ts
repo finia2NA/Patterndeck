@@ -232,10 +232,17 @@ export async function deleteNode(nodeId: string) {
 
 // ─── Decks ────────────────────────────────────────────────────────────────────
 
-export async function createDeckFromPath(path: string, topic: string, language: string, cardCount = 10, explanation?: string) {
+export async function createDeckFromPath(
+  path: string,
+  topic: string,
+  language: string,
+  cardCount = 10,
+  clarification?: string,
+  explanation?: string,
+) {
   return request<{ nodeId: string }>('/decks', {
     method: 'POST',
-    body: JSON.stringify({ path, topic, language, cardCount, explanation }),
+    body: JSON.stringify({ path, topic, clarification, language, cardCount, explanation }),
   }).then(r => r.nodeId);
 }
 
@@ -243,7 +250,7 @@ export async function getDeck(nodeId: string) {
   return request<DeckData>(`/decks/${nodeId}`);
 }
 
-export async function updateDeck(nodeId: string, updates: { name?: string; topic?: string; language?: string; cardCount?: number; explanation?: string }) {
+export async function updateDeck(nodeId: string, updates: { name?: string; topic?: string; clarification?: string; language?: string; cardCount?: number; explanation?: string }) {
   return request<{ regenerateExplanation: boolean }>(`/decks/${nodeId}`, {
     method: 'PATCH',
     body: JSON.stringify(updates),

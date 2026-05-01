@@ -14,6 +14,7 @@ import { TruncationWarning } from './ExplanationPanel';
 
 export interface OverlayDeck {
   topic: string;
+  clarification: string | null;
   deckName: string;
   explanation: string;
   wasTruncated: boolean;
@@ -21,6 +22,7 @@ export interface OverlayDeck {
 
 interface ExplanationOverlayProps {
   topic: string;
+  clarification?: string | null;
   explanation: string;
   wasTruncated: boolean;
   loading: boolean;
@@ -32,7 +34,7 @@ interface ExplanationOverlayProps {
 }
 
 export function ExplanationOverlay({
-  topic, explanation, wasTruncated, loading, loadPhase, onStart, onBack, insets, allDecks,
+  topic, clarification, explanation, wasTruncated, loading, loadPhase, onStart, onBack, insets, allDecks,
 }: ExplanationOverlayProps) {
   const colors = useColors();
   const [deckIndex, setDeckIndex] = useState(0);
@@ -40,6 +42,7 @@ export function ExplanationOverlay({
   const hasMultiple = allDecks && allDecks.length > 1;
 
   const displayTopic = hasMultiple ? allDecks[deckIndex].topic : topic;
+  const displayClarification = hasMultiple ? allDecks[deckIndex].clarification : clarification;
   const displayExplanation = hasMultiple ? allDecks[deckIndex].explanation : explanation;
   const displayTruncated = hasMultiple ? allDecks[deckIndex].wasTruncated : wasTruncated;
   const displayName = hasMultiple ? allDecks[deckIndex].deckName : undefined;
@@ -79,7 +82,14 @@ export function ExplanationOverlay({
         {displayName && displayName !== displayTopic && (
           <Text className="text-foreground-secondary text-sm mb-1">{displayName}</Text>
         )}
-        <Text className="text-foreground text-2xl font-bold mb-6">{displayTopic}</Text>
+        <Text className={`text-foreground text-2xl font-bold ${displayClarification?.trim() ? 'mb-2' : 'mb-6'}`}>
+          {displayTopic}
+        </Text>
+        {!!displayClarification?.trim() && (
+          <Text className="text-foreground-secondary text-sm italic leading-5 mb-6">
+            {displayClarification.trim()}
+          </Text>
+        )}
         {displayExplanation ? (
           <GrammarMarkdown>{displayExplanation}</GrammarMarkdown>
         ) : (

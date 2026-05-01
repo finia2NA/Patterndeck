@@ -43,6 +43,7 @@ interface DeckModalProps {
 export interface DeckFormData {
   path: string;
   topic: string;
+  clarification: string;
   language: Language;
   cardCount: CardCount;
   dueDate: string;
@@ -80,6 +81,7 @@ export function DeckModal({
 
   const [name, setName] = useState('');
   const [topic, setTopic] = useState('');
+  const [clarification, setClarification] = useState('');
   const [language, setLanguage] = useState<Language>('Japanese');
   const [cardCount, setCardCount] = useState<CardCount>(0);
   const [dueDate, setDueDate] = useState('');
@@ -98,18 +100,21 @@ export function DeckModal({
         setName(editNodePath ?? editNode.name);
         if (editNode.deck) {
           setTopic(editNode.deck.topic);
+          setClarification(editNode.deck.clarification ?? '');
           setLanguage(editNode.deck.language as Language);
           setCardCount(editNode.deck.cardCount as CardCount);
           setDueDate(editNode.deck.dueAt ? formatLocalDateToYmd(new Date(editNode.deck.dueAt)) : '');
           setExplanation(editNode.deck.explanation ?? '');
         } else {
           setTopic('');
+          setClarification('');
           setDueDate('');
           setExplanation('');
         }
       } else {
         setName(initialData?.path ?? '');
         setTopic(initialData?.topic ?? '');
+        setClarification(initialData?.clarification ?? '');
         setLanguage(initialData?.language ?? 'Japanese');
         setCardCount(initialData?.cardCount ?? 0);
         setDueDate(initialData?.dueDate ?? '');
@@ -134,6 +139,7 @@ export function DeckModal({
       await onSubmit({
         path: trimmedName,
         topic: trimmedTopic,
+        clarification,
         language,
         cardCount,
         dueDate: dueDate.trim(),
@@ -149,14 +155,17 @@ export function DeckModal({
   }
 
   function handleSubmit() {
-    const promptChanged = isEdit && !isCollection && editNode?.deck && topic.trim() !== editNode.deck.topic;
+    const promptChanged = isEdit && !isCollection && editNode?.deck && (
+      topic.trim() !== editNode.deck.topic ||
+      clarification.trim() !== (editNode.deck.clarification ?? '')
+    );
     if (!promptChanged) {
       void submitDeckForm();
       return;
     }
 
     const title = 'Regenerate explanation?';
-    const message = 'Editing the prompt will regenerate the explanation for this deck.';
+    const message = 'Editing the topic or clarification will regenerate the explanation for this deck.';
     if (Platform.OS === 'web') {
       if (window.confirm(`${title}\n\n${message}`)) void submitDeckForm();
       return;
@@ -247,6 +256,8 @@ export function DeckModal({
       onNameChange={setName}
       topic={topic}
       onTopicChange={setTopic}
+      clarification={clarification}
+      onClarificationChange={setClarification}
       explanation={explanation}
       onExplanationChange={setExplanation}
       showExplanationField={isEdit || explanation.length > 0}

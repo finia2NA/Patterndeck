@@ -20,6 +20,7 @@ export interface DeckInfo {
   explanation: string;
   wasTruncated: boolean;
   topic: string;
+  clarification: string | null;
   language: string;
   deckName: string;
   nodeId: string;
@@ -97,6 +98,7 @@ export function useMultiDeckSession({ nodeId, selectedDeckIds }: UseMultiDeckSes
               explanation: d.explanation!,
               wasTruncated: false,
               topic: d.topic,
+              clarification: d.clarification,
               language: d.language,
               deckName,
               nodeId: id,

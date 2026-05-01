@@ -39,8 +39,10 @@ treeRouter.get('/:id/export-csv', async (req, res, next) => {
   try {
     const { filename, rows } = await getExportRows(req.userId!, req.params.id);
     const escape = (s: string) => s.replace(/\r\n|\r|\n/g, '\\n');
-    const lines = ['DeckName\tTopic'];
-    for (const row of rows) lines.push(`${escape(row.deckName)}\t${escape(row.topic)}`);
+    const lines = ['DeckName\tTopic\tClarification\tExplanation'];
+    for (const row of rows) {
+      lines.push(`${escape(row.deckName)}\t${escape(row.topic)}\t${escape(row.clarification)}\t${escape(row.explanation)}`);
+    }
     res.json({ filename, csv: lines.join('\n') });
   } catch (e) { next(e); }
 });

@@ -6,6 +6,7 @@
  */
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, Keyboard } from 'react-native';
+import { useColors } from '@/constants/theme';
 
 export interface PillDropdownProps<T extends string | number> {
   value: T;
@@ -18,6 +19,7 @@ export function PillDropdown<T extends string | number>({
   value, options, onChange, formatLabel,
 }: PillDropdownProps<T>) {
   const [open, setOpen] = useState(false);
+  const colors = useColors();
   const label = formatLabel ? formatLabel(value) : String(value);
 
   return (
@@ -40,8 +42,8 @@ export function PillDropdown<T extends string | number>({
             activeOpacity={0}
           />
           <View
-            className="absolute right-0 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden"
-            style={{ top: '100%', marginTop: 4, zIndex: 100, minWidth: 130 } as any}
+            className="absolute right-0 rounded-xl shadow-2xl overflow-hidden"
+            style={{ top: '100%', marginTop: 4, zIndex: 100, minWidth: 130, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border } as any}
           >
             {options.map((opt) => (
               <TouchableOpacity

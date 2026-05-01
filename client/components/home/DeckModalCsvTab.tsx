@@ -64,13 +64,13 @@ export function DeckModalCsvTab({
             Tab-separated (.tsv / .csv). Commas in text are fine — only tabs separate columns.
           </Text>
           <View className="bg-surface border border-border rounded-xl px-4 py-3 mb-3">
-            <Text className="text-foreground text-sm font-mono">DeckName&#9;Topic&#9;Explanation</Text>
+            <Text className="text-foreground text-sm font-mono">DeckName&#9;Topic&#9;Clarification&#9;Explanation</Text>
           </View>
           <Text className="text-foreground-secondary text-sm leading-5 mb-1">
-            • Header row is optional. Without it, columns are: <Text className="text-foreground font-mono">DeckName</Text>, <Text className="text-foreground font-mono">Topic</Text>, <Text className="text-foreground font-mono">Explanation</Text>.
+            • Header row is optional. Without it, columns are: <Text className="text-foreground font-mono">DeckName</Text>, <Text className="text-foreground font-mono">Topic</Text>, <Text className="text-foreground font-mono">Clarification</Text>, <Text className="text-foreground font-mono">Explanation</Text>.
           </Text>
           <Text className="text-foreground-secondary text-sm leading-5 mb-1">
-            • <Text className="text-foreground font-mono">DeckName</Text> and <Text className="text-foreground font-mono">Explanation</Text> columns can be omitted.
+            • <Text className="text-foreground font-mono">DeckName</Text>, <Text className="text-foreground font-mono">Clarification</Text>, and <Text className="text-foreground font-mono">Explanation</Text> columns can be omitted.
           </Text>
           <Text className="text-foreground-secondary text-sm leading-5 mb-4">
             • If <Text className="text-foreground font-mono">DeckName</Text> is blank, <Text className="text-foreground font-mono">Topic</Text> is used as the deck name.
@@ -81,10 +81,13 @@ export function DeckModalCsvTab({
             • Each row creates one subdeck inside the collection.
           </Text>
           <Text className="text-foreground-secondary text-sm leading-5 mb-1">
-            • <Text className="text-foreground font-mono">Topic</Text> and <Text className="text-foreground font-mono">Explanation</Text> are concatenated into one prompt used for explanation and card generation.
+            • <Text className="text-foreground font-mono">Clarification</Text> gives the model extra guidance while keeping <Text className="text-foreground font-mono">Topic</Text> short.
+          </Text>
+          <Text className="text-foreground-secondary text-sm leading-5 mb-1">
+            • <Text className="text-foreground font-mono">Explanation</Text> is treated as already-generated markdown and is saved directly.
           </Text>
           <Text className="text-foreground-secondary text-sm leading-5">
-            • Explanations generate in the background (up to 5 at a time). Check back as they finish.
+            • Rows without <Text className="text-foreground font-mono">Explanation</Text> generate in the background (up to 5 at a time).
           </Text>
           </View>
         </AnimatedCollapsible>

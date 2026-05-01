@@ -5,13 +5,13 @@ import { buildSrsConfig, isDueNow, resolveDueAt } from './srs.service.js';
 
 // Deck select used by tree queries — omits explanation to keep responses small.
 const DECK_TREE_SELECT = {
-  nodeId: true, topic: true, language: true,
+  nodeId: true, topic: true, clarification: true, language: true,
   explanationStatus: true, cardCount: true,
   lastStudiedAt: true, dueAt: true, intervalDays: true,
 } as const;
 
 type DeckTreeRow = {
-  nodeId: string; topic: string; language: string;
+  nodeId: string; topic: string; clarification: string | null; language: string;
   explanationStatus: string; cardCount: number;
   lastStudiedAt: Date | null; dueAt: Date | null; intervalDays: number;
 };
@@ -21,6 +21,7 @@ function mapDeckWithDue(deck: DeckTreeRow, srsConfig: { dailyDueTime: string; re
   return {
     nodeId: deck.nodeId,
     topic: deck.topic,
+    clarification: deck.clarification,
     language: deck.language,
     explanation: null,
     explanationStatus: deck.explanationStatus as DeckData['explanationStatus'],
@@ -119,7 +120,7 @@ export async function getNodePath(userId: string, nodeId: string): Promise<strin
   return parts.join('::');
 }
 
-interface ExportRow { deckName: string; topic: string; }
+interface ExportRow { deckName: string; topic: string; clarification: string; explanation: string; }
 
 /** BFS to collect all nodes, then DFS to build export rows with relative paths. */
 export async function getExportRows(
@@ -133,7 +134,7 @@ export async function getExportRows(
 
   const allNodes: Array<{
     id: string; parentId: string | null; name: string;
-    deck: { topic: string } | null; childIds: string[];
+    deck: { topic: string; clarification: string | null; explanation: string | null } | null; childIds: string[];
   }> = [];
 
   const queue = [nodeId];
@@ -142,14 +143,14 @@ export async function getExportRows(
     const nodes = await prisma.node.findMany({
       where: { id: { in: batch }, userId },
       include: {
-        deck: { select: { topic: true } },
+        deck: { select: { topic: true, clarification: true, explanation: true } },
         children: { select: { id: true }, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
       },
     });
     for (const node of nodes) {
       allNodes.push({
         id: node.id, parentId: node.parentId, name: node.name,
-        deck: node.deck ? { topic: node.deck.topic } : null,
+        deck: node.deck ? { topic: node.deck.topic, clarification: node.deck.clarification, explanation: node.deck.explanation } : null,
         childIds: node.children.map(c => c.id),
       });
       for (const child of node.children) queue.push(child.id);
@@ -173,12 +174,24 @@ export async function getExportRows(
   const rows: ExportRow[] = [];
 
   if (startNode.deck) {
-    rows.push({ deckName: startNode.name, topic: startNode.deck.topic });
+    rows.push({
+      deckName: startNode.name,
+      topic: startNode.deck.topic,
+      clarification: startNode.deck.clarification ?? '',
+      explanation: startNode.deck.explanation ?? '',
+    });
   } else {
     function dfs(id: string) {
       const node = nodeMap.get(id);
       if (!node) return;
-      if (node.deck) rows.push({ deckName: getRelativePath(id), topic: node.deck.topic });
+      if (node.deck) {
+        rows.push({
+          deckName: getRelativePath(id),
+          topic: node.deck.topic,
+          clarification: node.deck.clarification ?? '',
+          explanation: node.deck.explanation ?? '',
+        });
+      }
       for (const childId of node.childIds) dfs(childId);
     }
     for (const childId of startNode.childIds) dfs(childId);
