@@ -1,9 +1,16 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 
 const devServerHost = process.env.DEV_SERVER_HOST || 'localhost';
 const devServerPort = process.env.DEV_SERVER_PORT || '3001';
 const backendDebugUiEnabled = process.env.BACKEND_DEBUG_UI !== '0';
 const expoProjectId = process.env.EXPO_PUBLIC_EXPO_PROJECT_ID || process.env.EXPO_PROJECT_ID;
+const defaultAndroidGoogleServicesFile = './google-services.json';
+const androidGoogleServicesFile = process.env.ANDROID_GOOGLE_SERVICES_FILE
+  || (existsSync(path.resolve(__dirname, defaultAndroidGoogleServicesFile))
+    ? defaultAndroidGoogleServicesFile
+    : undefined);
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -42,6 +49,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: 'com.finite.grammarcrammer',
+    ...(androidGoogleServicesFile ? { googleServicesFile: androidGoogleServicesFile } : {}),
   },
   web: {
     output: 'static' as const,

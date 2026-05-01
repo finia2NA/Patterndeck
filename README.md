@@ -144,6 +144,12 @@ Runs the iPad layout natively on macOS. Requires macOS + Xcode.
 npx expo run:android
 ```
 
+For Android push notifications, create or open the Firebase project used by the
+Expo project, add an Android app with package name `com.finite.grammarcrammer`,
+download `google-services.json`, and place it at `client/google-services.json`.
+The private FCM v1 service-account JSON is only needed when uploading push
+credentials to EAS with `eas credentials`; do not commit that private key.
+
 ---
 
 ## Deployment
@@ -186,4 +192,3 @@ pnpm ship           # builds frontend + backend, deploys both to server
 | Card generation / judgment  | Claude Haiku 4.5           |
 
 ---
-

@@ -32,6 +32,12 @@ yarn-error.*
 .env
 .env*.local
 
+# Firebase / push-notification private credentials
+client/*service-account*.json
+client/*ServiceAccount*.json
+client/fcm-*.json
+client/firebase-adminsdk-*.json
+
 # typescript
 *.tsbuildinfo
 
