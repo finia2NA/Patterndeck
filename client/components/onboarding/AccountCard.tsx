@@ -59,7 +59,7 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
             : 'Create an account to save your decks and study progress.')}
       </Text>
 
-      {!success && (
+      <Animated.View style={{ opacity: success ? formDim : 1 }}>
         <AnimatedTabbed
           className="mb-5"
           variant="subtle"
@@ -69,11 +69,10 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
           ]}
           value={isLogin ? 'signin' : 'signup'}
           onChange={() => onToggleMode()}
-          disabled={loading}
+          disabled={loading || success}
         />
-      )}
 
-      <Animated.View style={{ opacity: success ? formDim : 1 }} className="mb-4">
+        <View className="mb-4">
         <Text className="text-foreground/80 text-sm font-medium mb-2">Email</Text>
         <View className="p-1 mb-3">
           <TextInput
@@ -105,6 +104,7 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
             onSubmitEditing={onSubmit}
             editable={!loading && !success}
           />
+        </View>
         </View>
       </Animated.View>
 
