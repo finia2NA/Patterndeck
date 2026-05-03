@@ -249,7 +249,7 @@ export function DeckModal({
       cornerRadius={18}
       confirmationTitle="Regenerate explanation?"
       confirmationMessage="This will regenerate the explanation for this deck."
-      confirmationActionText="Regenerate and Save"
+      confirmationActionText="Confirm"
     />
   ) : undefined;
 
