@@ -1,15 +1,17 @@
 # PatternDeck
 
-PatternDeck is an AI-assisted grammar study app designed for language learners who need more than memorization. It generates structured lessons, turns them into adaptive practice, evaluates free-text answers, and schedules review over time.
+PatternDeck is an AI-assisted grammar study app designed for language learners. The system was built to make grammar study feel native to the product rather than bolted onto flashcards.
 
-The system was built to make grammar study feel native to the product rather than bolted onto flashcards, combining long-form explanations, feedback loops, and cost-aware AI infrastructure.
+Using a system like Anki for grammar, the learner has to write comprehensive explanations themselves, and the knowledge contained in the flashcards they create might not generalize to the topic itself. Judging cards too can be a difficult and time consuming.
+
+Patterndeck and goes beyond traditional Flashcard apps by fully generating structured lessons, turning them into adaptive practice, evaluating free-text answers and using this to schedule review sessions.
 
 ---
 
 ## What It Does
 
 - Generates grammar explanations with examples, tables, and contextual coverage  
-- Converts explanations into dynamic practice cards  
+- Converts explanations into dynamic practice cards, different every study session
 - Evaluates free-text answers with AI and provides feedback  
 - Supports in-session chat and word-level hints  
 - Organizes decks in a hierarchical collection system  
@@ -21,12 +23,12 @@ The system was built to make grammar study feel native to the product rather tha
 
 ## Engineering Highlights
 
-- Designed a streaming pipeline for AI-generated explanations using Anthropic APIs to reduce perceived latency  
-- Implemented asynchronous deck generation to avoid blocking user-facing requests  
-- Built a cost-control layer with per-user and global monthly budget enforcement for AI usage  
-- Designed a relational schema supporting hierarchical collections and spaced repetition  
-- Implemented full-stack analytics (PostHog) to track user behavior, AI usage, and system performance  
-- Secured user API keys using AES-256-GCM encryption  
+PatternDeck is built to keep study sessions responsive and continuous, even when generating large amounts of AI-driven content.
+- Explanations are streamed into the app as they’re generated, so users can start reading immediately instead of waiting for a full response. When creating decks that require longer processing, generation runs in the background, allowing the interface to stay fast and usable.
+- Because the system relies heavily on AI, usage is tracked and controlled centrally. The app manages both per-user and global limits to keep costs predictable while still allowing flexible usage patterns.
+- Study content and progress are organized around a hierarchical collection system in the familiar Anki format, with scheduling logic built directly into the data model to support spaced repetition over time.
+- Throughout the app, analytics are used to understand how sessions unfold, how AI features are used, and where failures occur. This makes it possible to iterate on both the learning experience and the underlying system.
+- Sensitive data, such as user API keys, is handled securely and never exposed to the client.
 
 ---
 
