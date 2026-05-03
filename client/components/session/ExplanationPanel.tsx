@@ -231,7 +231,7 @@ export function BottomSheet({
         right: 0,
         backgroundColor: c.surface,
         borderTopWidth: 1,
-        borderTopColor: c.primary,
+        borderTopColor: c.border,
         borderTopLeftRadius: 16,
         borderTopRightRadius: 16,
         overflow: 'hidden',
