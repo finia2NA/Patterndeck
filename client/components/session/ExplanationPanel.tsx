@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   Animated,
   PanResponder,
@@ -190,6 +190,7 @@ export function BottomSheet({
     return PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, { dy }) => shouldClaim() && Math.abs(dy) > 5,
+      onMoveShouldSetPanResponderCapture: (_, { dy }) => shouldClaim() && Math.abs(dy) > 5,
       onPanResponderGrant: () => { animHeight.stopAnimation(); },
       onPanResponderMove: (_, { dy }) => {
         const base = expandedRef.current ? expandHRef.current : peekHRef.current;
@@ -204,14 +205,24 @@ export function BottomSheet({
     });
   }
 
-  // Outer sheet: only claims when collapsed (body drag to expand)
+  // Collapsed sheet: the whole visible card is a pull-up target.
   const outerPan = useRef(makePanHandlers(() => !expandedRef.current)).current;
-  // Header: only claims when expanded (header drag to dismiss)
-  const headerPan = useRef(makePanHandlers(() => expandedRef.current)).current;
+  // Header: drag up to expand when collapsed, drag down to collapse when expanded.
+  const headerPan = useRef(makePanHandlers(() => true)).current;
+  const webCollapsedSelectionProps = Platform.OS === 'web'
+    ? {
+      style: {
+        userSelect: expanded ? 'auto' : 'none',
+        WebkitUserSelect: expanded ? 'auto' : 'none',
+        cursor: expanded ? 'default' : 'pointer',
+      },
+    }
+    : {};
 
   return (
     <Animated.View
       {...outerPan.panHandlers}
+      {...webCollapsedSelectionProps}
       style={{
         height: animHeight,
         position: 'absolute',
@@ -224,25 +235,30 @@ export function BottomSheet({
         borderTopLeftRadius: 16,
         borderTopRightRadius: 16,
         overflow: 'hidden',
+        ...(Platform.OS === 'web' ? webCollapsedSelectionProps.style : {}),
       }}
     >
       {/* Handle + header — tap + drag target */}
-      <View {...headerPan.panHandlers}>
-        <TouchableOpacity onPress={() => snapTo(!expandedRef.current)} className="items-center pt-2 pb-1" activeOpacity={1}>
+      <Pressable
+        {...headerPan.panHandlers}
+        onPress={() => snapTo(!expandedRef.current)}
+        style={Platform.OS === 'web' ? { cursor: 'pointer' } as any : undefined}
+      >
+        <View className="items-center pt-2 pb-1">
           <View className="w-10 h-1 bg-border rounded-full" />
-        </TouchableOpacity>
+        </View>
         <View className="flex-row items-center justify-between px-5 pb-2">
           <View className="flex-1 pr-3">
-            <Text className="text-foreground-secondary text-xs font-semibold uppercase tracking-widest">
+            <Text selectable={false} className="text-foreground-secondary text-xs font-semibold uppercase tracking-widest">
               Grammar Reference
             </Text>
             {!!topic.trim() && (
-              <Text className="text-foreground text-sm font-semibold mt-1" numberOfLines={1}>
+              <Text selectable={false} className="text-foreground text-sm font-semibold mt-1" numberOfLines={1}>
                 {topic.trim()}
               </Text>
             )}
             {!!clarification?.trim() && (
-              <Text className="text-foreground-secondary text-xs italic mt-0.5" numberOfLines={2}>
+              <Text selectable={false} className="text-foreground-secondary text-xs italic mt-0.5" numberOfLines={2}>
                 {clarification.trim()}
               </Text>
             )}
@@ -253,7 +269,7 @@ export function BottomSheet({
             </TouchTarget>
           )}
         </View>
-      </View>
+      </Pressable>
 
       <ScrollView
         scrollEnabled={expanded}

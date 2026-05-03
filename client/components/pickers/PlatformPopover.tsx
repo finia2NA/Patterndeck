@@ -1,8 +1,9 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Modal, PanResponder, Platform, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Modal, Platform, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { GlassView } from 'expo-glass-effect';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
+import { PullDownCard } from '@/components/PullDownCard';
 import { useColors } from '@/constants/theme';
 
 export type PlatformPopoverPlacement = 'auto' | 'above' | 'below';
@@ -56,6 +57,15 @@ export function PlatformPopover({
     setOpen(true);
   }, [backdropOpacity, disabled, sheetHeight, sheetY]);
 
+  const springSheetOpen = useCallback(() => {
+    Animated.spring(sheetY, {
+      toValue: 0,
+      damping: 24,
+      stiffness: 260,
+      useNativeDriver: true,
+    }).start();
+  }, [sheetY]);
+
   useEffect(() => {
     if (!open || Platform.OS !== 'ios') return;
     Animated.parallel([
@@ -91,32 +101,6 @@ export function PlatformPopover({
       }),
     ]).start(() => setOpen(false));
   }, [backdropOpacity, sheetHeight, sheetY]);
-
-  const sheetPanResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => false,
-    onMoveShouldSetPanResponder: (_, { dx, dy }) => (
-      Platform.OS === 'ios' && open && dy > 8 && Math.abs(dy) > Math.abs(dx)
-    ),
-    onPanResponderGrant: () => {
-      sheetY.stopAnimation();
-    },
-    onPanResponderMove: (_, { dy }) => {
-      sheetY.setValue(Math.max(0, dy));
-    },
-    onPanResponderRelease: (_, { dy, vy }) => {
-      if (dy > 90 || vy > 0.8) {
-        closePopover();
-        return;
-      }
-
-      Animated.spring(sheetY, {
-        toValue: 0,
-        damping: 24,
-        stiffness: 260,
-        useNativeDriver: true,
-      }).start();
-    },
-  }), [closePopover, open, sheetY]);
 
   function handleCancel() {
     onCancel?.();
@@ -162,74 +146,78 @@ export function PlatformPopover({
                 opacity: backdropOpacity,
               }}
             />
-            <Animated.View
-              {...sheetPanResponder.panHandlers}
+            <PullDownCard
+              translateY={sheetY}
+              onDismiss={closePopover}
+              onReset={springSheetOpen}
+              disabled={!open}
               style={{
                 marginHorizontal: 12,
                 marginBottom: -Math.max(insets.bottom, 18),
-                transform: [{ translateY: sheetY }],
               }}
             >
-              <Pressable
-                style={{
-                  borderTopLeftRadius: 28,
-                  borderTopRightRadius: 28,
-                  overflow: 'hidden',
-                }}
-                onPress={() => {}}
-              >
-                <GlassView
-                  glassEffectStyle="regular"
-                  colorScheme="auto"
+              {(pullDownHandle) => (
+                <Pressable
+                  style={{
+                    borderTopLeftRadius: 28,
+                    borderTopRightRadius: 28,
+                    overflow: 'hidden',
+                  }}
+                  onPress={() => {}}
                 >
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      borderTopLeftRadius: 28,
-                      borderTopRightRadius: 28,
-                      paddingHorizontal: 14,
-                      paddingTop: 10,
-                      paddingBottom: Math.max(insets.bottom, 18) + 22,
-                      minHeight,
-                    }}
+                  <GlassView
+                    glassEffectStyle="regular"
+                    colorScheme="auto"
                   >
-                    <View className="flex-row items-center justify-between mb-4">
-                      <TouchableOpacity
-                        onPress={handleCancel}
-                        activeOpacity={0.85}
-                        className="w-14 h-14 rounded-full items-center justify-center"
-                        style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' }}
-                      >
-                        <Icon name="close" size={26} color={colors.foreground} />
-                      </TouchableOpacity>
-                      <Text
-                        className="text-foreground font-bold"
-                        style={{ fontSize: 16 }}
-                      >
-                        {title}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={handleDone}
-                        activeOpacity={0.9}
-                        className="w-14 h-14 rounded-full items-center justify-center"
-                        style={{ backgroundColor: colors.primary, borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)' }}
-                      >
-                        <Icon name="check" size={30} color={colors.primary_foreground} />
-                      </TouchableOpacity>
-                    </View>
-
-                    {children}
-
-                    {footer ? (
-                      <View className="mt-4 mb-5">
-                        {footer}
+                    <View
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderTopLeftRadius: 28,
+                        borderTopRightRadius: 28,
+                        paddingHorizontal: 14,
+                        paddingBottom: Math.max(insets.bottom, 18) + 22,
+                        minHeight,
+                      }}
+                    >
+                      {pullDownHandle}
+                      <View className="flex-row items-center justify-between mb-4">
+                        <TouchableOpacity
+                          onPress={handleCancel}
+                          activeOpacity={0.85}
+                          className="w-14 h-14 rounded-full items-center justify-center"
+                          style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' }}
+                        >
+                          <Icon name="close" size={26} color={colors.foreground} />
+                        </TouchableOpacity>
+                        <Text
+                          className="text-foreground font-bold"
+                          style={{ fontSize: 16 }}
+                        >
+                          {title}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={handleDone}
+                          activeOpacity={0.9}
+                          className="w-14 h-14 rounded-full items-center justify-center"
+                          style={{ backgroundColor: colors.primary, borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)' }}
+                        >
+                          <Icon name="check" size={30} color={colors.primary_foreground} />
+                        </TouchableOpacity>
                       </View>
-                    ) : null}
-                  </View>
-                </GlassView>
-              </Pressable>
-            </Animated.View>
+
+                      {children}
+
+                      {footer ? (
+                        <View className="mt-4 mb-5">
+                          {footer}
+                        </View>
+                      ) : null}
+                    </View>
+                  </GlassView>
+                </Pressable>
+              )}
+            </PullDownCard>
           </Pressable>
         </Modal>
       ) : null}
