@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import { PageSheetModal } from '@/components/PageSheetModal';
 import { AnimatedTabbed } from '@/components/AnimatedTabbed';
 import type { Language, CardCount } from '@/constants/session';
@@ -12,20 +14,39 @@ import { DeckModalCsvTab } from './DeckModalCsvTab';
 import { formatLocalDateToYmd } from '@/components/pickers/dateUtils';
 import { useEnabledLanguages } from '@/hooks/state/persistent/useSettings';
 
-function triggerCsvDownload(filename: string, csv: string) {
-  if (Platform.OS !== 'web') {
-    Alert.alert('Export', 'CSV export is only available on web.');
+async function triggerCsvDownload(filename: string, csv: string) {
+  if (Platform.OS === 'web') {
+    const blob = new Blob([csv], { type: 'text/tab-separated-values;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     return;
   }
-  const blob = new Blob([csv], { type: 'text/tab-separated-values;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+
+  const canShare = await Sharing.isAvailableAsync();
+  if (!canShare) {
+    throw new Error('Sharing is not available on this device.');
+  }
+
+  const fileUri = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory ?? ''}${filename}`;
+  if (!fileUri) {
+    throw new Error('Could not prepare a file for export.');
+  }
+
+  await FileSystem.writeAsStringAsync(fileUri, csv, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+
+  await Sharing.shareAsync(fileUri, {
+    mimeType: 'text/tab-separated-values',
+    dialogTitle: 'Export CSV',
+    UTI: 'public.comma-separated-values-text',
+  });
 }
 
 interface DeckModalProps {
@@ -176,7 +197,7 @@ export function DeckModal({
     if (!editNode) return;
     try {
       const { filename, csv } = await exportNodeCsv(editNode.id);
-      triggerCsvDownload(filename, csv);
+      await triggerCsvDownload(filename, csv);
     } catch (e: any) {
       Alert.alert('Export failed', e?.message ?? 'Unknown error');
     }
