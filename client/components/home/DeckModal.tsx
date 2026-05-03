@@ -167,14 +167,7 @@ export function DeckModal({
   );
 
   function handleSubmit() {
-    if (!promptChanged) {
-      void submitDeckForm();
-      return;
-    }
-    Alert.alert('Regenerate explanation?', 'Editing the topic or clarification will regenerate the explanation for this deck.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm', onPress: () => { void submitDeckForm(); } },
-    ]);
+    void submitDeckForm();
   }
 
   function handleFileSelected(fileName: string, content: string) {

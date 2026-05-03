@@ -165,11 +165,14 @@ class PlatformButtonView: ExpoView {
     ) { [weak self] _ in
       self?.onButtonPress()
     }
-    return UIMenu(
-      title: confirmationTitle ?? "",
-      subtitle: confirmationMessage,
-      children: [action]
-    )
+    if #available(iOS 16.0, *) {
+      return UIMenu(
+        title: confirmationTitle ?? "",
+        subtitle: confirmationMessage,
+        children: [action]
+      )
+    }
+    return UIMenu(title: confirmationTitle ?? "", children: [action])
   }
 
   private func refreshConfiguration() {
