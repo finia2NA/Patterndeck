@@ -26,8 +26,10 @@ interface PageSheetModalProps {
   onConfirm?: () => void;
   confirmDisabled?: boolean;
   confirmCloses?: boolean;
-  /** Replaces the default confirm button in the header (e.g. a PlatformPopover-wrapped button) */
-  confirmButtonNode?: ReactNode;
+  confirmConfirmationTitle?: string;
+  confirmConfirmationMessage?: string;
+  confirmConfirmationActionText?: string;
+  confirmConfirmationDestructive?: boolean;
   children: ReactNode;
 }
 
@@ -44,7 +46,10 @@ export function PageSheetModal({
   onConfirm,
   confirmDisabled = false,
   confirmCloses = true,
-  confirmButtonNode,
+  confirmConfirmationTitle,
+  confirmConfirmationMessage,
+  confirmConfirmationActionText,
+  confirmConfirmationDestructive = false,
   children,
 }: PageSheetModalProps) {
   const insets = useSafeAreaInsets();
@@ -154,11 +159,7 @@ export function PageSheetModal({
         {title}
       </Text>
 
-      {confirmButtonNode ? (
-        <View style={[styles.headerSideRight, { width: headerSideWidth }]}>
-          {confirmButtonNode}
-        </View>
-      ) : confirmText ? (
+      {confirmText ? (
         <View style={[styles.headerSideRight, { width: headerSideWidth }]}>
           <PlatformButton
             text={confirmText}
@@ -175,6 +176,10 @@ export function PageSheetModal({
             horizontalPadding={14}
             verticalPadding={7}
             cornerRadius={18}
+            confirmationTitle={confirmConfirmationTitle}
+            confirmationMessage={confirmConfirmationMessage}
+            confirmationActionText={confirmConfirmationActionText}
+            confirmationDestructive={confirmConfirmationDestructive}
           />
         </View>
       ) : (

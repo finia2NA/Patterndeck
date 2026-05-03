@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
 import { PageSheetModal } from '@/components/PageSheetModal';
-import { PlatformButton } from '@/components/PlatformButton';
 import { AnimatedTabbed } from '@/components/AnimatedTabbed';
-import { useColors } from '@/constants/theme';
 import type { Language, CardCount } from '@/constants/session';
 import { DEFAULT_LANGUAGES } from '@/constants/session';
 import type { TreeNode } from '@/lib/types';
@@ -28,10 +26,6 @@ function triggerCsvDownload(filename: string, csv: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-function estimateHeaderButtonWidth(label: string) {
-  return Math.max(88, Math.min(132, label.length * 9 + 48));
 }
 
 interface DeckModalProps {
@@ -84,7 +78,6 @@ export function DeckModal({
   const isCollection = isEdit && editNode.deck === null;
   const canUseCsvTab = !isEdit;
   const enabledLanguages = useEnabledLanguages(DEFAULT_LANGUAGES);
-  const colors = useColors();
 
   const [name, setName] = useState('');
   const [topic, setTopic] = useState('');
@@ -223,28 +216,6 @@ export function DeckModal({
   const confirmText = showingCsvTab ? (isImporting ? 'Importing…' : 'Import') : submitting ? 'Saving…' : isEdit ? 'Save' : 'Create';
   const confirmDisabled = showingCsvTab ? !csvCanImport : !canSubmit || submitting;
   const handleConfirm = showingCsvTab ? handleCsvImport : handleSubmit;
-  const confirmButtonWidth = estimateHeaderButtonWidth(confirmText);
-
-  const confirmButtonNode = promptChanged && !showingCsvTab ? (
-    <PlatformButton
-      text={confirmText}
-      onPress={() => { void submitDeckForm(); }}
-      disabled={confirmDisabled}
-      variant="glass"
-      color={colors.primary}
-      backgroundColor={Platform.OS === 'ios' ? colors.background_warm : undefined}
-      disabledColor={colors.foreground_secondary}
-      style={{ width: confirmButtonWidth, height: 36, alignItems: 'center', justifyContent: 'center' }}
-      fontSize={16}
-      fontWeight="semibold"
-      horizontalPadding={14}
-      verticalPadding={7}
-      cornerRadius={18}
-      confirmationTitle="Regenerate explanation?"
-      confirmationMessage="This will regenerate the explanation for this deck."
-      confirmationActionText="Confirm"
-    />
-  ) : undefined;
 
   const tabContent = activeTab === 'csv' ? (
     <DeckModalCsvTab
@@ -295,7 +266,9 @@ export function DeckModal({
       onConfirm={handleConfirm}
       confirmDisabled={confirmDisabled}
       confirmCloses={false}
-      confirmButtonNode={confirmButtonNode}
+      confirmConfirmationTitle={promptChanged && !showingCsvTab ? 'Regenerate explanation?' : undefined}
+      confirmConfirmationMessage={promptChanged && !showingCsvTab ? 'This will regenerate the explanation for this deck.' : undefined}
+      confirmConfirmationActionText={promptChanged && !showingCsvTab ? 'Confirm' : undefined}
     >
       {canUseCsvTab && (
         <AnimatedTabbed
