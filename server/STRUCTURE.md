@@ -297,6 +297,9 @@ MonthlyUsageSummary  (denormalized running totals for fast limit checks)
 | `CENTRAL_KEY_USER_MONTHLY_LIMIT`  | No       | Per-user monthly spend limit in USD (default 0)  |
 | `CENTRAL_KEY_GLOBAL_MONTHLY_LIMIT`| No       | Global monthly spend limit in USD (default 0)    |
 | `RESEND_API_KEY`                  | No       | Resend API key for password reset emails         |
+| `APP_URL`                         | No       | Public app URL used in password reset links      |
 | `EMAIL_FROM`                      | No       | Sender address for transactional emails          |
-| `POSTHOG_API_KEY`                 | No       | PostHog project API key for server-side analytics|
+| `POSTHOG_PROJECT_API_KEY`         | No       | PostHog project API key for server-side analytics|
+| `POSTHOG_HOST`                    | No       | PostHog host URL (default `https://us.i.posthog.com`) |
+| `POSTHOG_ENABLED`                 | No       | Set to `0` to disable server-side analytics      |
 | `PORT`                            | No       | HTTP port (default 3001)                         |
