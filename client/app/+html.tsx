@@ -63,10 +63,7 @@ export default function Root({ children }: PropsWithChildren) {
         <div id="gc-loader">
           <div id="gc-spinner" />
           <div id="gc-loader-brand">
-            <picture>
-              <source srcSet="/logo-mark-dark.svg" media="(prefers-color-scheme: dark)" />
-              <img id="gc-loader-logo" src="/logo-mark.svg" alt="" />
-            </picture>
+            <img id="gc-loader-logo" src="/logo-mark.svg" alt="" />
             <div id="gc-loader-wordmark">Pattern Deck</div>
           </div>
         </div>

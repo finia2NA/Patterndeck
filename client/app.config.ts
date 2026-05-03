@@ -83,7 +83,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           resizeMode: 'contain',
           backgroundColor: '#FAECDC',
           dark: {
-            image: './assets/images/splash-icon-android-dark.png',
             backgroundColor: '#141517',
           },
         },

@@ -61,7 +61,7 @@ client/
 │   │
 │   ├── AnimatedCollapsible.tsx             ← Collapsible section with height animation
 │   ├── AnimatedTabbed.tsx                  ← Animated tab switcher
-│   ├── BrandLogo.tsx                       ← App logo (light/dark variant)
+│   ├── BrandLogo.tsx                       ← App logo using the in-app light mark
 │   ├── Icon.tsx / Icon.ios.tsx / Icon.types.ts ← Cross-platform icon system
 │   ├── NeedsConfirmationButton.tsx         ← Two-tap confirmation button
 │   ├── OnboardingBackground.tsx            ← Decorative onboarding background

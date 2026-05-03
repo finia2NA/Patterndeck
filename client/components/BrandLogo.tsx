@@ -3,7 +3,6 @@ import { Text, View, type ViewStyle } from 'react-native';
 import { useColors } from '@/constants/theme';
 
 const logoMark = require('../assets/images/logo-mark.png');
-const logoMarkDark = require('../assets/images/logo-mark-dark.png');
 
 type BrandLogoProps = {
   direction?: 'row' | 'column';
@@ -21,7 +20,6 @@ export function BrandLogo({
   wordmarkSize = 20,
 }: BrandLogoProps) {
   const colors = useColors();
-  const source = colors.background === '#141517' ? logoMarkDark : logoMark;
 
   return (
     <View
@@ -35,7 +33,7 @@ export function BrandLogo({
       ]}
     >
       <Image
-        source={source}
+        source={logoMark}
         contentFit="contain"
         style={{ width: size, height: size }}
         accessibilityLabel="Pattern Deck logo"
