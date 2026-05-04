@@ -49,6 +49,7 @@ interface FlashcardDeckProps {
   onSubmitAnswer: () => void;
   onConfirmCorrect: () => void;
   onConfirmWrong: () => void;
+  onOverrideWrong: () => void;
   inputRef: React.RefObject<TextInput | null>;
   chatMessages: ChatMessage[];
   chatStreaming: boolean;
@@ -66,7 +67,7 @@ export function FlashcardDeck({
   answer, onChangeAnswer, submittedAnswer,
   feedback, wrongExplanation,
   showHint, onToggleHint,
-  onSubmitAnswer, onConfirmCorrect, onConfirmWrong,
+  onSubmitAnswer, onConfirmCorrect, onConfirmWrong, onOverrideWrong,
   inputRef, chatMessages, chatStreaming, onChatSend, deckName,
   hintCache, addCost, vocabHintDismissSignal, analyticsContext, onWordHint,
 }: FlashcardDeckProps) {
@@ -185,6 +186,9 @@ export function FlashcardDeck({
             >
               <Text className="text-primary-foreground font-semibold">Try again later →</Text>
             </TouchableOpacity>
+            <TouchTarget onPress={onOverrideWrong} style={{ alignSelf: 'flex-end' }}>
+              <Text className="text-secondary text-xs">Override to correct</Text>
+            </TouchTarget>
             <CardChat messages={chatMessages} streaming={chatStreaming} onSend={onChatSend} />
           </View>
         )}

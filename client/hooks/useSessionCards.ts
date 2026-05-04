@@ -168,6 +168,45 @@ export function useSessionCards({
     setCardPhase('input');
   }, [cards, submittedAnswer, setCards]);
 
+  const handleOverrideWrong = useCallback(() => {
+    const current = cards[0];
+    const prevAnswers = cardWrongAnswers.current.get(current.id) ?? [];
+    const answers = [...prevAnswers, submittedAnswer];
+    const judgment = lastJudgmentRef.current;
+    analytics.track('judgment_overridden', {
+      ...currentCardContext(current, judgment?.attemptNumber ?? answers.length),
+      user_sentence: submittedAnswer,
+      generated_sentence: current.targetLanguage,
+      attempt_number: judgment?.attemptNumber ?? answers.length,
+      feedback_brevity: feedbackBrevity,
+      judge_with_explanation: judgeWithExplanation,
+    });
+    analytics.track('card_answered', {
+      ...currentCardContext(current, judgment?.attemptNumber ?? answers.length),
+      was_correct_after_ai_judge: false,
+      rejection_overridden_by_ai: false,
+      rejection_overridden_by_user: true,
+      attempt_number: judgment?.attemptNumber ?? answers.length,
+      answer_length_bucket: submittedAnswer.length < 20 ? 'short' : submittedAnswer.length < 80 ? 'medium' : 'long',
+      feedback_brevity: feedbackBrevity,
+      judge_with_explanation: judgeWithExplanation,
+    });
+    cardWrongAnswers.current.delete(current.id);
+    setCompletedCards(prev => [...prev, {
+      card: current,
+      answers,
+      deckId: (current as DeckCard).deckId,
+    }]);
+    setCards((prev: any[]) => prev.slice(1));
+    setAnswer('');
+    setWrongExplanation('');
+    setShowHint(false);
+    setChatMessages([]);
+    setChatStreaming(false);
+    lastJudgmentRef.current = null;
+    setCardPhase('input');
+  }, [cards, submittedAnswer, setCards]);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (cardPhase !== 'correct' && cardPhase !== 'wrong_shown') return;
@@ -241,7 +280,7 @@ export function useSessionCards({
     completedCards, beginningTotalSpend, beginningSessionCostRef,
     hintCache, inputRef,
     metricsRef,
-    handleSubmitAnswer, handleConfirmCorrect, handleConfirmWrong, handleChatSend,
+    handleSubmitAnswer, handleConfirmCorrect, handleConfirmWrong, handleOverrideWrong, handleChatSend,
     recordWordHint: () => { metricsRef.current.wordHintCount += 1; },
     toggleHint: () => {
       const current = cards[0];

@@ -437,6 +437,7 @@ function SessionUI({
     onSubmitAnswer: session.handleSubmitAnswer,
     onConfirmCorrect: session.handleConfirmCorrect,
     onConfirmWrong: session.handleConfirmWrong,
+    onOverrideWrong: session.handleOverrideWrong,
     inputRef: session.inputRef,
     chatMessages: session.chatMessages,
     chatStreaming: session.chatStreaming,
