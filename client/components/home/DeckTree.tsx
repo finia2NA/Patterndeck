@@ -117,22 +117,29 @@ function TreeRow({ node, depth, collapsedIds, onToggle, onStudy, onEdit, onHisto
           </Text>
         </TouchableOpacity>
 
-        {/* Due indicator (deck rows only) */}
-        {!isCollection && node.deck && <DueIndicator dueAt={node.deck.dueAt ?? null} isDue={node.deck.isDue ?? false} />}
+        {/* Due indicator — deck rows; spacer keeps buttons aligned on collection rows */}
+        {!isCollection && node.deck
+          ? <DueIndicator dueAt={node.deck.dueAt ?? null} isDue={node.deck.isDue ?? false} />
+          : <View style={{ width: 72 }} />
+        }
 
         {/* Explanation generating spinner */}
         {!isCollection && <StatusBadge status={node.deck!.explanationStatus} />}
 
-        {/* History button — show for studied decks and collections with children */}
-        {(!isCollection && node.deck?.dueAt != null || isCollection && node.children.length > 0) && (
-          <TouchableOpacity
-            className="w-10 h-10 items-center justify-center"
-            onPress={() => onHistory(node)}
-            activeOpacity={0.6}
-          >
-            <Icon name="history" size={14} color={colors.foreground_secondary} />
-          </TouchableOpacity>
-        )}
+        {/* History button — spacer when not applicable keeps edit button aligned */}
+        {(!isCollection && node.deck?.dueAt != null) || (isCollection && node.children.length > 0)
+          ? (
+            <TouchableOpacity
+              className="w-10 h-10 items-center justify-center"
+              onPress={() => onHistory(node)}
+              activeOpacity={0.6}
+            >
+              <Icon name="clock" size={15} color={colors.foreground_secondary} />
+            </TouchableOpacity>
+          ) : (
+            <View className="w-10" />
+          )
+        }
 
         {/* Edit button */}
         <TouchableOpacity

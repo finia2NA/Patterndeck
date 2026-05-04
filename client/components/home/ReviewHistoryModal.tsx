@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { PageSheetModal } from '@/components/PageSheetModal';
@@ -346,6 +346,8 @@ function IntervalChart({
 
 // ─── Review Table ─────────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 20;
+
 function ReviewTable({
   reviews,
   isCollection,
@@ -353,6 +355,10 @@ function ReviewTable({
   reviews: (DeckReviewRecord | CollectionReviewRecord)[];
   isCollection: boolean;
 }) {
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const visible = reviews.slice(0, visibleCount);
+  const hasMore = visibleCount < reviews.length;
+
   return (
     <View className="bg-surface border border-border rounded-2xl overflow-hidden">
       {/* Table header */}
@@ -364,34 +370,42 @@ function ReviewTable({
         <Text className="text-foreground-secondary text-xs font-medium text-right" style={{ width: 55 }}>Interval</Text>
       </View>
 
-      <ScrollView style={{ maxHeight: 280 }}>
-        {reviews.map((review, i) => (
-          <View
-            key={review.id}
-            className={`flex-row items-center px-4 py-2.5 ${i < reviews.length - 1 ? 'border-b border-foreground/5' : ''}`}
-          >
-            <Text className="text-foreground text-xs" style={{ width: 70 }}>
-              {formatShortDate(new Date(review.studiedAt))}
+      {visible.map((review, i) => (
+        <View
+          key={review.id}
+          className={`flex-row items-center px-4 py-2.5 ${i < visible.length - 1 || hasMore ? 'border-b border-foreground/5' : ''}`}
+        >
+          <Text className="text-foreground text-xs" style={{ width: 70 }}>
+            {formatShortDate(new Date(review.studiedAt))}
+          </Text>
+          {isCollection && (
+            <Text className="text-foreground text-xs flex-1" numberOfLines={1}>
+              {(review as CollectionReviewRecord).deckName}
             </Text>
-            {isCollection && (
-              <Text className="text-foreground text-xs flex-1" numberOfLines={1}>
-                {(review as CollectionReviewRecord).deckName}
-              </Text>
-            )}
-            <Text className="text-foreground text-xs text-center" style={{ width: 40 }}>
-              {renderStars(review.userStars)}
-            </Text>
-            <Text className="text-foreground text-xs text-center" style={{ width: 55 }}>
-              {review.correctCount != null && review.totalCount != null
-                ? `${review.correctCount}/${review.totalCount}`
-                : '-'}
-            </Text>
-            <Text className="text-foreground-secondary text-xs text-right" style={{ width: 55 }}>
-              {Math.round(review.intervalApplied * 10) / 10}d
-            </Text>
-          </View>
-        ))}
-      </ScrollView>
+          )}
+          <Text className="text-foreground text-xs text-center" style={{ width: 40 }}>
+            {renderStars(review.userStars)}
+          </Text>
+          <Text className="text-foreground text-xs text-center" style={{ width: 55 }}>
+            {review.correctCount != null && review.totalCount != null
+              ? `${review.correctCount}/${review.totalCount}`
+              : '-'}
+          </Text>
+          <Text className="text-foreground-secondary text-xs text-right" style={{ width: 55 }}>
+            {Math.round(review.intervalApplied * 10) / 10}d
+          </Text>
+        </View>
+      ))}
+
+      {hasMore && (
+        <TouchableOpacity
+          className="px-4 py-2.5 items-end"
+          onPress={() => setVisibleCount(c => c + PAGE_SIZE)}
+          activeOpacity={0.6}
+        >
+          <Text className="text-primary text-xs font-medium">Show more</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
