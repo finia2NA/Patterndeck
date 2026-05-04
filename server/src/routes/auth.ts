@@ -17,7 +17,7 @@ authRouter.post('/register', async (req, res, next) => {
     const pwErr = validatePassword(password);
     if (pwErr) throw new AppError(400, 'WEAK_PASSWORD', pwErr);
     const result = await register(email, password);
-    identify(result.user.id, { auth_method: 'email' });
+    identify(result.user.id, { auth_method: 'email', email });
     capture(result.user.id, 'onboarding_completed', { auth_method: 'email', auth_flow: 'register' });
     res.status(201).json(result);
   } catch (e) { next(e); }
@@ -28,7 +28,7 @@ authRouter.post('/login', async (req, res, next) => {
     const { email, password } = req.body;
     if (!email || !password) throw new AppError(400, 'MISSING_FIELDS', 'Email and password are required.');
     const result = await login(email, password);
-    identify(result.user.id, { auth_method: 'email' });
+    identify(result.user.id, { auth_method: 'email', email });
     res.json(result);
   } catch (e) { next(e); }
 });
@@ -48,7 +48,7 @@ authRouter.post('/apple', async (req, res, next) => {
     const appleId = payload.sub;
     const email = payload.email ?? null;
     const result = await findOrCreateByApple(appleId, email);
-    identify(result.user.id, { auth_method: 'apple' });
+    identify(result.user.id, { auth_method: 'apple', email: result.user.email ?? undefined });
     res.json(result);
   } catch (e) { next(e); }
 });
@@ -68,7 +68,7 @@ authRouter.post('/google', async (req, res, next) => {
     if (!payload?.sub) throw new AppError(401, 'INVALID_TOKEN', 'Invalid Google token.');
 
     const result = await findOrCreateByGoogle(payload.sub, payload.email ?? null);
-    identify(result.user.id, { auth_method: 'google' });
+    identify(result.user.id, { auth_method: 'google', email: result.user.email ?? undefined });
     res.json(result);
   } catch (e) { next(e); }
 });
@@ -124,7 +124,7 @@ authRouter.post('/reset-password', async (req, res, next) => {
 authRouter.get('/me', requireAuth, async (req, res, next) => {
   try {
     const result = await getMe(req.userId!);
-    identify(req.userId!, { has_api_key: result.hasApiKey, central_key_available: result.centralKeyAvailable });
+    identify(req.userId!, { has_api_key: result.hasApiKey, central_key_available: result.centralKeyAvailable, email: result.email ?? undefined });
     res.json(result);
   } catch (e) { next(e); }
 });

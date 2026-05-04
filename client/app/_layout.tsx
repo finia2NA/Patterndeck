@@ -25,6 +25,7 @@ export default function RootLayout() {
         has_api_key: me.hasApiKey,
         central_key_available: me.centralKeyAvailable,
         auth_methods: me.authMethods,
+        email: me.email ?? undefined,
       });
     }
 

@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Switch,
   Platform,
+  Alert,
+  Pressable,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useColors } from '@/constants/theme';
 import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
 import { useRouter } from 'expo-router';
-import { clearAuthToken, clearUserEmail, clearUserId, getUserEmail } from '@/lib/storage';
+import { clearAuthToken, clearUserEmail, clearUserId, getUserEmail, getUserId } from '@/lib/storage';
 import { deleteApiKey, getUsageStatus, hydrateSettings, parseEnabledLanguages, saveSettings } from '@/lib/api';
 import type { UsageStatus } from '@/lib/api';
 import { getSettingsSnapshot, resetLocalSettings } from '@/hooks/state/persistent/settingsStore';
@@ -61,6 +64,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const [saving, setSaving] = useState(false);
   const [notificationSetupBusy, setNotificationSetupBusy] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const accountTapCount = useRef(0);
+  const accountTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -175,6 +180,23 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       onClose();
       router.replace('/onboarding');
     }
+  }
+
+  async function handleAccountTitleTap() {
+    accountTapCount.current += 1;
+    if (accountTapTimer.current) clearTimeout(accountTapTimer.current);
+    if (accountTapCount.current >= 10) {
+      accountTapCount.current = 0;
+      const userId = await getUserId();
+      if (userId) {
+        await Clipboard.setStringAsync(userId);
+        Alert.alert('User ID copied', userId);
+      } else {
+        Alert.alert('No user ID found');
+      }
+      return;
+    }
+    accountTapTimer.current = setTimeout(() => { accountTapCount.current = 0; }, 2000);
   }
 
   function handleKeyAdded() {
@@ -372,7 +394,14 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       )}
 
       {/* Account */}
-      <SectionCard title="Account">
+      <View className="mb-5">
+        <Pressable onPress={handleAccountTitleTap} hitSlop={8}>
+          <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-2 px-1">
+            Account
+          </Text>
+        </Pressable>
+        <View className="h-px bg-border mb-4" />
+        <View className="px-1">
         {userEmail && (
           <View className="mb-4">
             <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-1">Logged in as</Text>
@@ -387,7 +416,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             destructive
           />
         </View>
-      </SectionCard>
+        </View>
+      </View>
     </PageSheetModal>
   );
 }

@@ -308,7 +308,7 @@ export default function Onboarding() {
       await setAuthToken(result.token);
       await setUserId(result.user.id);
       if (result.user.email) await setUserEmail(result.user.email);
-      analytics.identify(result.user.id, { auth_method: 'email' });
+      analytics.identify(result.user.id, { auth_method: 'email', email: result.user.email ?? undefined });
       if (!isLogin) {
         analytics.track('onboarding_completed', { auth_method: 'email', auth_flow: 'register' });
       }
@@ -371,6 +371,7 @@ export default function Onboarding() {
         has_api_key: me.hasApiKey,
         central_key_available: me.centralKeyAvailable,
         auth_methods: me.authMethods,
+        email: me.email ?? undefined,
       });
       await hydrateSettings();
       setCentralKeyAvailable(me.centralKeyAvailable);
