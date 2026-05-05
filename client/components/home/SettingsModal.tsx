@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useColors } from '@/constants/theme';
+import pluralize from 'pluralize'
 import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
 import { useRouter } from 'expo-router';
 import { clearAuthToken, clearUserEmail, clearUserId, getUserEmail, getUserId } from '@/lib/storage';
@@ -73,7 +74,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     if (!visible) return;
     let mounted = true;
 
-    hydrateSettings().catch(() => {}).finally(() => {
+    hydrateSettings().catch(() => { }).finally(() => {
       if (!mounted) return;
       const settings = getSettingsSnapshot();
 
@@ -101,10 +102,10 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
     getUsageStatus().then(status => {
       if (mounted) setUsageStatus(status);
-    }).catch(() => {});
+    }).catch(() => { });
     getUserEmail().then(email => {
       if (mounted) setUserEmail(email);
-    }).catch(() => {});
+    }).catch(() => { });
     setShowAddKey(false);
     setSaving(false);
 
@@ -155,7 +156,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     try {
       await saveSettings(nextSettings);
       if (notificationsEnabled === 'off') {
-        await unregisterCurrentPushDevice().catch(() => {});
+        await unregisterCurrentPushDevice().catch(() => { });
       }
       onClose();
     } catch (e) {
@@ -167,7 +168,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   }
 
   async function handleLogout() {
-    await unregisterCurrentPushDevice().catch(() => {});
+    await unregisterCurrentPushDevice().catch(() => { });
     await clearAuthToken();
     await clearUserId();
     await clearUserEmail();
@@ -209,7 +210,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
 
   function handleKeyAdded() {
     setShowAddKey(false);
-    getUsageStatus().then(setUsageStatus).catch(() => {});
+    getUsageStatus().then(setUsageStatus).catch(() => { });
   }
 
   return (
@@ -277,7 +278,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             value={maxDecksPerSession}
             options={[1, 2, 3, 5, 10] as const}
             onChange={setMaxDecksPerSession}
-            formatLabel={(v: number) => String(v)}
+            formatLabel={(v: number) => pluralize('deck', v, true)}
           />
         </SettingsRow>
         <SettingsRow
@@ -288,7 +289,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             value={newDecksPerDay}
             options={[1, 2, 3, 5, 999] as const}
             onChange={setNewDecksPerDay}
-            formatLabel={(v: number) => v >= 999 ? '∞' : String(v)}
+            formatLabel={(v: number) => v >= 999 ? '∞ decks' : pluralize('deck', v, true)}
           />
         </SettingsRow>
         <SettingsRow
@@ -432,20 +433,20 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         </Pressable>
         <View className="h-px bg-border mb-4" />
         <View className="px-1">
-        {userEmail && (
+          {userEmail && (
+            <View className="mb-4">
+              <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-1">Logged in as</Text>
+              <Text className="text-foreground text-sm">{userEmail}</Text>
+            </View>
+          )}
           <View className="mb-4">
-            <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-1">Logged in as</Text>
-            <Text className="text-foreground text-sm">{userEmail}</Text>
+            <ConfirmButton
+              label="Log Out"
+              confirmLabel="Tap again to log out"
+              onConfirm={handleLogout}
+              destructive
+            />
           </View>
-        )}
-        <View className="mb-4">
-          <ConfirmButton
-            label="Log Out"
-            confirmLabel="Tap again to log out"
-            onConfirm={handleLogout}
-            destructive
-          />
-        </View>
         </View>
       </View>
     </PageSheetModal>
