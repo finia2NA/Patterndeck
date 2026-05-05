@@ -16,6 +16,7 @@ import {
   REJECTION_PROMPT,
   SESSION_RATING_PROMPT,
   WORD_HINT_PROMPT,
+  type PromptWithTool,
 } from '../constants/prompts.js';
 import type { Card } from '../types/index.js';
 import { DEBUG_AI } from '../routes/claude-proxy.js';
@@ -226,11 +227,8 @@ async function callTextStream(
 async function callTool<T>(
   apiKey: string,
   model: string,
-  system: string,
+  prompt: PromptWithTool,
   userMessage: string,
-  toolName: string,
-  toolDescription: string,
-  inputSchema: object,
   maxTokens: number,
   analytics?: AiCallAnalytics,
 ): Promise<{ result: T; cost: number; inputTokens: number; outputTokens: number; latencyMs: number }> {
@@ -245,9 +243,9 @@ async function callTool<T>(
       body: JSON.stringify({
         model,
         max_tokens: maxTokens,
-        system,
-        tools: [{ name: toolName, description: toolDescription, input_schema: inputSchema }],
-        tool_choice: { type: 'tool', name: toolName },
+        system: prompt.system,
+        tools: [{ name: prompt.tool.name, description: prompt.tool.description, input_schema: prompt.tool.inputSchema }],
+        tool_choice: { type: 'tool', name: prompt.tool.name },
         messages: [{ role: 'user', content: userMessage }],
       }),
     });
@@ -437,31 +435,8 @@ export async function generateCards(userId: string, topic: string, language: str
 
   const { result, cost } = await callTool<{ cards: Omit<Card, 'id'>[] }>(
     apiKey, HAIKU,
-    CARD_GEN_PROMPT(language),
+    CARD_GEN_PROMPT(language, count),
     JSON.stringify({ topic, count, explanation }),
-    'generate_flashcards',
-    'Output the requested flashcard pairs.',
-    {
-      type: 'object',
-      properties: {
-        cards: {
-          type: 'array',
-          minItems: count,
-          maxItems: count,
-          items: {
-            type: 'object',
-            properties: {
-              english: { type: 'string', description: 'The English sentence the learner must translate.' },
-              targetLanguage: { type: 'string', description: `The correct ${language} translation.` },
-              sentenceContext: { type: 'string', description: 'Optional 1–3 word context note.' },
-              notes: { type: 'string', description: 'Optional grammar note.' },
-            },
-            required: ['english', 'targetLanguage'],
-          },
-        },
-      },
-      required: ['cards'],
-    },
     2000,
     {
       userId,
@@ -523,18 +498,6 @@ export async function judgeAnswer(userId: string, card: Card, userAnswer: string
     apiKey, HAIKU,
     JUDGMENT_PROMPT(language, brevity),
     JSON.stringify(userPayload),
-    'submit_judgment',
-    brevity === 'brief'
-      ? 'Submit whether the student answer is correct with a very short reason (a few words).'
-      : 'First explain your reasoning in one sentence, then submit whether the student answer is correct.',
-    {
-      type: 'object',
-      properties: {
-        reason: { type: 'string', description: brevity === 'brief' ? 'A few-word note (e.g. "Wrong tense" or "Correct!").' : 'One-sentence explanation of why the answer is correct or incorrect.' },
-        correct: { type: 'boolean', description: 'Whether the answer is correct.' },
-      },
-      required: ['reason', 'correct'],
-    },
     brevity === 'brief' ? 60 : 120,
     {
       userId,
@@ -567,16 +530,6 @@ export async function reviewRejection(
     apiKey, SONNET,
     REJECTION_PROMPT(language, brevity),
     JSON.stringify(userPayload),
-    'submit_review',
-    'Submit the review of the learner\'s answer, including whether to override the rejection.',
-    {
-      type: 'object',
-      properties: {
-        explanation: { type: 'string', description: brevity === 'brief' ? 'Feedback for the learner (1–2 sentences).' : 'Feedback for the learner (2–4 sentences).' },
-        overrideToCorrect: { type: 'boolean', description: 'True if the answer was actually correct and the rejection was a mistake.' },
-      },
-      required: ['explanation', 'overrideToCorrect'],
-    },
     brevity === 'brief' ? 200 : 400,
     {
       userId,
@@ -651,16 +604,6 @@ export async function rateSession(
     apiKey, HAIKU,
     SESSION_RATING_PROMPT(language),
     JSON.stringify({ topic, cards: normalizedCards }),
-    'rate_session',
-    'Submit a star rating and short recap for the student\'s session performance.',
-    {
-      type: 'object',
-      properties: {
-        stars: { type: 'integer', minimum: 1, maximum: 5, description: 'Performance rating from 1 (poor) to 5 (excellent).' },
-        recap: { type: 'string', description: '1–2 sentence recap of the student\'s performance.' },
-      },
-      required: ['stars', 'recap'],
-    },
     200,
     {
       userId,
@@ -692,17 +635,6 @@ export async function generateWordHint(
     apiKey, HAIKU,
     WORD_HINT_PROMPT(language),
     JSON.stringify({ english, targetLanguage, word }),
-    'provide_word_hint',
-    'Provide the dictionary form, furigana annotation, and grammatical category for the requested word.',
-    {
-      type: 'object',
-      properties: {
-        infinitive: { type: 'string', description: 'The dictionary/plain form of the word (not the conjugated form from the translation).' },
-        with_annotation: { type: 'string', description: 'The infinitive in Anki-style furigana notation. For Latin-script languages equals infinitive.' },
-        word_type: { type: 'string', description: 'Grammatical category using language-appropriate terminology.' },
-      },
-      required: ['infinitive', 'with_annotation', 'word_type'],
-    },
     150,
     {
       userId,

@@ -3,7 +3,7 @@ export interface Card {
   english: string;
   targetLanguage: string;
   sentenceContext?: string;
-  notes?: string;
+  hint?: string;
 }
 
 export type ExplanationStatus = 'pending' | 'generating' | 'ready' | 'error';

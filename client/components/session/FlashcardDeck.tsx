@@ -72,7 +72,7 @@ export function FlashcardDeck({
   hintCache, addCost, vocabHintDismissSignal, analyticsContext, onWordHint,
 }: FlashcardDeckProps) {
   const colors = useColors();
-  const currentCard = cards[0] ?? { english: '', targetLanguage: '', notes: '', sentenceContext: '' };
+  const currentCard = cards[0] ?? { english: '', targetLanguage: '', hint: '', sentenceContext: '' };
 
   return (
     <>
@@ -128,10 +128,10 @@ export function FlashcardDeck({
             </TouchableOpacity>
 
             {/* Hint */}
-            {currentCard.notes && (
+            {currentCard.hint && (
               showHint ? (
                 <View className="bg-background-muted rounded-lg px-3 py-2">
-                  <Text className="text-foreground-secondary text-xs">{currentCard.notes}</Text>
+                  <Text className="text-foreground-secondary text-xs">{currentCard.hint}</Text>
                 </View>
               ) : (
                 <TouchTarget onPress={onToggleHint} style={{ alignSelf: 'center' }}>
