@@ -52,10 +52,4 @@ server/dist/
 server/prisma/*.db
 server/prisma/*.db-journal
 
-# My things
-.claude/
-AGENTS.md
-.vscode/
-learnings/
-.codesight/
 *.db
