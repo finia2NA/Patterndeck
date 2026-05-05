@@ -75,12 +75,13 @@ export function PageSheetModal({
   const confirmButtonWidth = confirmText ? estimateHeaderButtonWidth(confirmText) : 0;
   const headerSideWidth = Math.max(cancelButtonWidth, confirmButtonWidth);
 
-  // Internal state keeps Modal mounted while the exit animation plays on large screens.
+  // Web-only: keep Modal mounted while exit animation plays.
   const [shown, setShown] = useState(false);
   const slideY = useRef(new Animated.Value(height)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (Platform.OS !== 'web') return;
     if (visible) {
       setShown(true);
       slideY.setValue(height);
@@ -103,6 +104,10 @@ export function PageSheetModal({
   }, [visible, height, slideY, backdropOpacity]);
 
   const animateOut = useCallback((then: () => void) => {
+    if (Platform.OS !== 'web') {
+      then();
+      return;
+    }
     Animated.parallel([
       Animated.timing(slideY, {
         toValue: height,
@@ -130,14 +135,10 @@ export function PageSheetModal({
     else onConfirm();
   }, [onConfirm, confirmDisabled, confirmCloses, animateOut]);
 
-  const header = (
+  const makeHeader = (paddingTop: number) => (
     <View
       className="flex-row items-center border-b border-border"
-      style={{
-        paddingHorizontal: 24,
-        paddingTop: isSmallScreen ? insets.top + 8 : 12,
-        paddingBottom: 8,
-      }}
+      style={{ paddingHorizontal: 24, paddingTop, paddingBottom: 8 }}
     >
       <View style={[styles.headerSideLeft, { width: headerSideWidth }]}>
         <PlatformButton
@@ -188,12 +189,48 @@ export function PageSheetModal({
     </View>
   );
 
-  const modalVisible = shown;
-  const bodyPaddingBottom = isSmallScreen ? insets.bottom + 24 : 24;
+  const scrollView = (paddingBottom: number) => (
+    <PageSheetScrollContext.Provider value={isScrollingRef}>
+      <KeyboardAwareScrollView
+        style={styles.bodyScroll}
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingTop: 16,
+          paddingBottom,
+        }}
+        keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={() => { isScrollingRef.current = true; }}
+        onScrollEndDrag={() => { setTimeout(() => { isScrollingRef.current = false; }, 80); }}
+        onMomentumScrollEnd={() => { isScrollingRef.current = false; }}
+      >
+        {children}
+      </KeyboardAwareScrollView>
+    </PageSheetScrollContext.Provider>
+  );
 
+  // Native: delegate presentation entirely to iOS/Android — swipe-to-dismiss and
+  // resize behaviour are handled by the platform.
+  if (Platform.OS !== 'web') {
+    return (
+      <Modal
+        visible={visible}
+        transparent={false}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCancel}
+      >
+        <View style={[styles.container, themeVars]} className="bg-background">
+          {makeHeader(insets.top + 8)}
+          {scrollView(insets.bottom + 24)}
+        </View>
+      </Modal>
+    );
+  }
+
+  // Web: custom animated sheet with backdrop.
   return (
     <Modal
-      visible={modalVisible}
+      visible={shown}
       transparent
       animationType="none"
       onRequestClose={handleCancel}
@@ -216,23 +253,8 @@ export function PageSheetModal({
             className={isSmallScreen ? 'flex-1 bg-background' : 'bg-background rounded-2xl overflow-hidden'}
             style={isSmallScreen ? styles.sheetContainer : styles.cardContainer}
           >
-            {header}
-            <PageSheetScrollContext.Provider value={isScrollingRef}>
-              <KeyboardAwareScrollView
-                style={styles.bodyScroll}
-                contentContainerStyle={{
-                  paddingHorizontal: 24,
-                  paddingTop: 16,
-                  paddingBottom: bodyPaddingBottom,
-                }}
-                keyboardShouldPersistTaps="handled"
-                onScrollBeginDrag={() => { isScrollingRef.current = true; }}
-                onScrollEndDrag={() => { setTimeout(() => { isScrollingRef.current = false; }, 80); }}
-                onMomentumScrollEnd={() => { isScrollingRef.current = false; }}
-              >
-                {children}
-              </KeyboardAwareScrollView>
-            </PageSheetScrollContext.Provider>
+            {makeHeader(isSmallScreen ? insets.top + 8 : 12)}
+            {scrollView(isSmallScreen ? insets.bottom + 24 : 24)}
           </View>
         </Animated.View>
       </View>
@@ -241,6 +263,9 @@ export function PageSheetModal({
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   overlay: {
     flex: 1,
   },

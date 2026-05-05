@@ -45,6 +45,7 @@ export function PlatformPopover({
   onCancel,
   sheetHeight = 420,
   minHeight = 360,
+  maxWidth,
   children,
   trigger,
 }: PlatformPopoverProps) {
@@ -161,6 +162,9 @@ export function PlatformPopover({
               style={{
                 marginHorizontal: 12,
                 marginBottom: -Math.max(insets.bottom, 18),
+                maxWidth,
+                width: '100%',
+                alignSelf: 'center',
               }}
             >
               {(pullDownHandle) => (

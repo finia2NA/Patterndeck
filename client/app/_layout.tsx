@@ -1,15 +1,30 @@
 import '../global.css';
-import { useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { View, useColorScheme, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ColorsContext, darkThemeVars, lightThemeVars, dark, light } from '@/constants/theme';
 import { getMe, hydrateSettings } from '@/lib/api';
 import { AnalyticsProvider, analytics } from '@/lib/analytics';
 import { getAuthToken, setUserId } from '@/lib/storage';
 import { syncPushDeviceRegistrationIfEnabled } from '@/lib/notifications';
+import { useIsStageManagerWindow } from '@/hooks/useIsStageManagerWindow';
+
+// Adjusts safe area insets for Stage Manager floating windows on iPadOS, where
+// the window title bar (traffic lights) isn't always reflected in insets.top.
+function StageManagerInsetAdapter({ children }: { children: ReactNode }) {
+  const insets = useSafeAreaInsets();
+  const isStageManager = useIsStageManagerWindow();
+  const adjusted = isStageManager ? { ...insets, top: Math.max(insets.top, 32) } : insets;
+  return (
+    <SafeAreaInsetsContext.Provider value={adjusted}>
+      {children}
+    </SafeAreaInsetsContext.Provider>
+  );
+}
 
 export default function RootLayout() {
   const scheme = useColorScheme();
@@ -53,10 +68,12 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <ColorsContext.Provider value={colors}>
           <View style={[{ flex: 1 }, scheme === 'dark' ? darkThemeVars : lightThemeVars]}>
-            <KeyboardProvider>
-              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />
-              <StatusBar style="auto" />
-            </KeyboardProvider>
+            <StageManagerInsetAdapter>
+              <KeyboardProvider>
+                <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />
+                <StatusBar style="auto" />
+              </KeyboardProvider>
+            </StageManagerInsetAdapter>
           </View>
         </ColorsContext.Provider>
       </GestureHandlerRootView>
