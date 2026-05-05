@@ -18,8 +18,6 @@ import {
   createDeckFromPath,
   updateDeck,
   deleteNode,
-  getNodePath,
-  getDeck,
   moveNode,
   importDecksFromCsv,
   hydrateSettings,
@@ -144,16 +142,14 @@ export default function Home() {
     });
   }, [router]);
 
-  const handleEdit = useCallback(async (node: TreeNode) => {
-    const path = await getNodePath(node.id);
-    let nodeForEdit = node;
-    if (node.deck) {
-      const deck = await getDeck(node.id);
-      nodeForEdit = { ...node, deck };
-    }
-    setEditNodePathStr(path);
-    setEditNode(nodeForEdit);
+  const handleEdit = useCallback((node: TreeNode) => {
+    setEditNode(node);
+    setEditNodePathStr(node.name);
     setDeckModalVisible(true);
+  }, []);
+
+  const handleEditDataLoaded = useCallback((path: string) => {
+    setEditNodePathStr(path);
   }, []);
 
   const handleHistory = useCallback((node: TreeNode) => {
@@ -410,15 +406,16 @@ export default function Home() {
       )}
 
       {/* Modals */}
-      <DeckModal
-        visible={deckModalVisible}
-        onClose={() => { setDeckModalVisible(false); setEditNode(null); }}
-        onSubmit={handleSubmit}
-        onCsvImport={handleCsvImport}
-        onDelete={editNode ? handleDelete : undefined}
-        editNode={editNode}
-        editNodePath={editNodePathStr}
-      />
+       <DeckModal
+         visible={deckModalVisible}
+         onClose={() => { setDeckModalVisible(false); setEditNode(null); }}
+         onSubmit={handleSubmit}
+         onCsvImport={handleCsvImport}
+         onDelete={editNode ? handleDelete : undefined}
+         onEditDataLoaded={handleEditDataLoaded}
+         editNode={editNode}
+         editNodePath={editNodePathStr}
+       />
       <SettingsModal
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}

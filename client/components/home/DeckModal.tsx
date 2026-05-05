@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert, ActivityIndicator, Platform, View, Text } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { PageSheetModal } from '@/components/PageSheetModal';
@@ -8,9 +8,10 @@ import type { Language, CardCount } from '@/constants/session';
 import { DEFAULT_LANGUAGES } from '@/constants/session';
 import type { TreeNode } from '@/lib/types';
 import type { CsvImportResult } from '@/lib/api';
-import { exportNodeCsv } from '@/lib/api';
+import { exportNodeCsv, getNodePath, getDeck } from '@/lib/api';
 import { DeckModalCreateTab } from './DeckModalCreateTab';
 import { DeckModalCsvTab } from './DeckModalCsvTab';
+import { useColors } from '@/constants/theme';
 import { useEnabledLanguages } from '@/hooks/state/persistent/useSettings';
 
 async function triggerCsvDownload(filename: string, csv: string) {
@@ -54,6 +55,7 @@ interface DeckModalProps {
   onSubmit: (data: DeckFormData) => void | Promise<void>;
   onCsvImport?: (data: CsvImportData) => Promise<CsvImportResult>;
   onDelete?: () => void;
+  onEditDataLoaded?: (path: string) => void;
   editNode?: TreeNode | null;
   editNodePath?: string;
   initialData?: Partial<DeckFormData>;
@@ -87,10 +89,12 @@ export function DeckModal({
   onSubmit,
   onCsvImport,
   onDelete,
+  onEditDataLoaded,
   editNode,
   editNodePath,
   initialData,
 }: DeckModalProps) {
+  const colors = useColors();
   const isEdit = editNode !== null && editNode !== undefined;
   const isCollection = isEdit && editNode.deck === null;
   const canUseCsvTab = !isEdit;
@@ -106,35 +110,63 @@ export function DeckModal({
   const [csvContent, setCsvContent] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<CsvImportStatus>({ state: 'idle' });
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (visible) {
+    if (visible && isEdit && editNode) {
+      setLoading(true);
       setActiveTab('create');
       setCsvContent(null);
       setImportStatus({ state: 'idle' });
-      if (isEdit && editNode) {
-        setName(editNodePath ?? editNode.name);
-        if (editNode.deck) {
-          setTopic(editNode.deck.topic);
-          setClarification(editNode.deck.clarification ?? '');
-          setLanguage(editNode.deck.language as Language);
-          setCardCount(editNode.deck.cardCount as CardCount);
-          setExplanation(editNode.deck.explanation ?? '');
-        } else {
-          setTopic('');
-          setClarification('');
-          setExplanation('');
+
+      const node = editNode;
+      const pathProp = editNodePath;
+
+      async function loadEditData() {
+        try {
+          const path = await getNodePath(node.id);
+          if (onEditDataLoaded) onEditDataLoaded(path);
+          setName(path);
+
+          if (node.deck) {
+            const deck = await getDeck(node.id);
+            setTopic(deck.topic);
+            setClarification(deck.clarification ?? '');
+            setLanguage(deck.language as Language);
+            setCardCount(deck.cardCount as CardCount);
+            setExplanation(deck.explanation ?? '');
+          } else {
+            setTopic('');
+            setClarification('');
+            setExplanation('');
+          }
+        } catch {
+          setName(pathProp ?? node.name);
+          if (node.deck) {
+            setTopic(node.deck.topic);
+            setClarification(node.deck.clarification ?? '');
+            setLanguage(node.deck.language as Language);
+            setCardCount(node.deck.cardCount as CardCount);
+            setExplanation(node.deck.explanation ?? '');
+          }
+        } finally {
+          setLoading(false);
         }
-      } else {
-        setName(initialData?.path ?? '');
-        setTopic(initialData?.topic ?? '');
-        setClarification(initialData?.clarification ?? '');
-        setLanguage(initialData?.language ?? 'Japanese');
-        setCardCount(initialData?.cardCount ?? 0);
-        setExplanation(initialData?.explanation ?? '');
       }
+
+      loadEditData();
+    } else if (visible) {
+      setActiveTab('create');
+      setCsvContent(null);
+      setImportStatus({ state: 'idle' });
+      setName(initialData?.path ?? '');
+      setTopic(initialData?.topic ?? '');
+      setClarification(initialData?.clarification ?? '');
+      setLanguage(initialData?.language ?? 'Japanese');
+      setCardCount(initialData?.cardCount ?? 0);
+      setExplanation(initialData?.explanation ?? '');
     }
-  }, [visible, editNode, editNodePath, initialData, isEdit]);
+  }, [visible, editNode, editNodePath, isEdit, onEditDataLoaded, initialData]);
 
   useEffect(() => {
     if (!visible) return;
@@ -269,6 +301,25 @@ export function DeckModal({
       enabledLanguages={enabledLanguages}
     />
   );
+
+  if (loading && isEdit) {
+    return (
+      <PageSheetModal
+        visible={visible}
+        title={title}
+        cancelText="Cancel"
+        onCancel={onClose}
+        confirmText={confirmText}
+        onConfirm={handleConfirm}
+        confirmDisabled
+      >
+        <View className="items-center py-16">
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text className="text-foreground-secondary text-base mt-4">Loading deck…</Text>
+        </View>
+      </PageSheetModal>
+    );
+  }
 
   return (
     <PageSheetModal
