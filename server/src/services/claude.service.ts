@@ -131,7 +131,7 @@ async function callTextStream(
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({})) as any;
+      const err = await res.json().catch(() => ({})) as { error?: { message?: string } };
       throw new Error(err?.error?.message ?? `HTTP ${res.status}`);
     }
 
@@ -253,16 +253,17 @@ async function callTool<T>(
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({})) as any;
+      const err = await res.json().catch(() => ({})) as { error?: { message?: string } };
       throw new Error(err?.error?.message ?? `HTTP ${res.status}`);
     }
 
-    const data = await res.json() as any;
+    const data = await res.json() as { usage?: { input_tokens?: number; output_tokens?: number }; content: { type: string; input?: unknown }[] };
     inputTokens = data.usage?.input_tokens ?? 0;
     outputTokens = data.usage?.output_tokens ?? 0;
     const cost = calcCost(model, inputTokens, outputTokens);
     const latencyMs = Date.now() - startedAt;
-    const toolUse = data.content.find((b: any) => b.type === 'tool_use');
+    const toolUse = data.content.find((b) => b.type === 'tool_use');
+    if (!toolUse) throw new Error('No tool_use block in Claude response');
 
     if (analytics) {
       captureAiGeneration(analytics.userId, {

@@ -39,7 +39,7 @@ settingsRouter.put('/api-key', async (req, res, next) => {
     });
 
     if (!response.ok) {
-      const err = await response.json().catch(() => ({})) as any;
+      const err = await response.json().catch(() => ({})) as { error?: { message?: string } };
       throw new AppError(400, 'INVALID_KEY', err?.error?.message ?? 'Invalid API key.');
     }
 

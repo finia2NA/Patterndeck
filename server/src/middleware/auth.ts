@@ -3,6 +3,7 @@ import { verifyToken } from '../services/auth.service.js';
 import { AppError } from './errorHandler.js';
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       userId?: string;

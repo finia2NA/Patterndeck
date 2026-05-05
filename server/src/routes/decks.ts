@@ -190,11 +190,11 @@ decksRouter.post('/import-csv', upload.single('file'), async (req, res, next) =>
           enqueueExplanation(userId, nodeId);
           queuedCount++;
         }
-      } catch (e: any) {
+      } catch (e) {
         failures.push({
           line: row.lineNumber,
           context: row.deckName,
-          error: e?.message ?? 'Unknown error',
+          error: e instanceof Error ? e.message : 'Unknown error',
         });
       }
     }

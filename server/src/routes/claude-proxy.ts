@@ -25,8 +25,8 @@ function logAI(userId: string, type: string, model: string) {
   console.log(`[AI] ${userId} | ${type} | ${model}`);
 }
 
-function analyticsContext(body: any, fallback: Partial<AiAnalyticsContext> = {}): AiAnalyticsContext {
-  const raw = body?.analyticsContext ?? {};
+function analyticsContext(body: Record<string, unknown>, fallback: Partial<AiAnalyticsContext> = {}): AiAnalyticsContext {
+  const raw = (body?.analyticsContext ?? {}) as Record<string, unknown>;
   return {
     appSessionId: typeof raw.appSessionId === 'string' ? raw.appSessionId : fallback.appSessionId,
     studySessionId: typeof raw.studySessionId === 'string' ? raw.studySessionId : fallback.studySessionId,

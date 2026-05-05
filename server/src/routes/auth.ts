@@ -152,7 +152,7 @@ authRouter.post('/validate-key', requireAuth, async (req, res, next) => {
     if (response.ok) {
       res.json({ valid: true });
     } else {
-      const err = await response.json().catch(() => ({})) as any;
+      const err = await response.json().catch(() => ({})) as { error?: { message?: string } };
       res.json({ valid: false, error: err?.error?.message ?? `HTTP ${response.status}` });
     }
   } catch (e) { next(e); }
