@@ -32,7 +32,8 @@
     "xcode": "pnpm prebuild && open client/ios/*.xcworkspace",
     "build:web": "pnpm --filter client exec expo export --platform web",
     "ship": "bash deploy/deploy.sh",
-    "setup:server": "bash deploy/setup-server.sh"
+    "setup:server": "bash deploy/setup-server.sh",
+    "wiki": "pnpx codesight wiki"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
