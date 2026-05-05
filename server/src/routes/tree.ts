@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { getTree, getNode, getNodePath, getDescendantDeckIds, getExportRows, getCollectionReviews } from '../services/tree.service.js';
 import { getNewDecksStartedToday } from '../services/deck.service.js';
+import { createHash } from 'crypto';
 
 export const treeRouter = Router();
 
@@ -9,11 +10,17 @@ treeRouter.use(requireAuth);
 
 treeRouter.get('/', async (req, res, next) => {
   try {
+    const hashOnly = req.query.hashOnly === 'true';
     const [tree, newDecksStartedToday] = await Promise.all([
       getTree(req.userId!),
       getNewDecksStartedToday(req.userId!),
     ]);
-    res.json({ tree, newDecksStartedToday });
+    if (hashOnly) {
+      const hash = createHash('sha256').update(JSON.stringify({ tree, newDecksStartedToday })).digest('hex');
+      res.json({ hash });
+    } else {
+      res.json({ tree, newDecksStartedToday });
+    }
   } catch (e) { next(e); }
 });
 

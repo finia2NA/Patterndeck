@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getTree } from '@/lib/api';
+import { getTree, type TreeResponse, type TreeHashResponse } from '@/lib/api';
 import type { TreeNode } from '@/lib/types';
+import * as Crypto from 'expo-crypto';
+
+async function sha256(data: string): Promise<string> {
+  return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, data);
+}
 
 export function useDeckTree(active: boolean): {
   tree: TreeNode[];
@@ -13,16 +18,30 @@ export function useDeckTree(active: boolean): {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [newDecksStartedToday, setNewDecksStartedToday] = useState(0);
+  const [uiDataHash, setUiDataHash] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const manualRef = useRef(false);
 
-  const doFetch = useCallback(async (signal?: AbortSignal) => {
+  const fetchFullData = useCallback(async (signal?: AbortSignal) => {
+    const result = await getTree(signal, false) as TreeResponse;
+    if (signal?.aborted) return;
+    setTree(result.tree);
+    setNewDecksStartedToday(result.newDecksStartedToday);
+    const hash = await sha256(JSON.stringify({ tree: result.tree, newDecksStartedToday: result.newDecksStartedToday }));
+    setUiDataHash(hash);
+  }, []);
+
+  const doFetch = useCallback(async (signal?: AbortSignal, hashOnly?: boolean) => {
     try {
-      const result = await getTree(signal);
-      if (!signal?.aborted) {
-        setTree(result.tree);
-        setNewDecksStartedToday(result.newDecksStartedToday);
+      if (hashOnly) {
+        const result = await getTree(signal, true) as TreeHashResponse;
+        if (signal?.aborted) return;
+        if (result.hash !== uiDataHash) {
+          await fetchFullData(signal);
+        }
+        return;
       }
+      await fetchFullData(signal);
     } catch {
       console.error('Failed to fetch deck tree');
     } finally {
@@ -34,12 +53,12 @@ export function useDeckTree(active: boolean): {
         }
       }
     }
-  }, []);
+  }, [uiDataHash, fetchFullData]);
 
   const refresh = useCallback(async () => {
     manualRef.current = true;
     setRefreshing(true);
-    await doFetch();
+    await doFetch(undefined, false);
   }, [doFetch]);
 
   useEffect(() => {
@@ -51,8 +70,8 @@ export function useDeckTree(active: boolean): {
       return;
     }
     const controller = new AbortController();
-    doFetch(controller.signal);
-    intervalRef.current = setInterval(() => doFetch(controller.signal), 5000);
+    doFetch(controller.signal, false);
+    intervalRef.current = setInterval(() => doFetch(controller.signal, true), 5000);
     return () => {
       controller.abort();
       if (intervalRef.current) {

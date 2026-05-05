@@ -219,8 +219,16 @@ export interface TreeResponse {
   newDecksStartedToday: number;
 }
 
-export async function getTree(signal?: AbortSignal) {
-  return request<TreeResponse>('/tree', { signal });
+export interface TreeHashResponse {
+  hash: string;
+}
+
+export async function getTree(signal?: AbortSignal, hashOnly?: boolean) {
+  const query = hashOnly ? '?hashOnly=true' : '';
+  if (hashOnly) {
+    return request<TreeHashResponse>('/tree' + query, { signal });
+  }
+  return request<TreeResponse>('/tree' + query, { signal });
 }
 
 export async function getNode(id: string) {
