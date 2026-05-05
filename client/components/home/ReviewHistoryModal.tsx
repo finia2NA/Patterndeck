@@ -82,12 +82,6 @@ export function ReviewHistoryModal({
         <View className="items-center py-16">
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      ) : reviews.length === 0 ? (
-        <View className="items-center py-16 px-8">
-          <Text className="text-foreground-secondary text-base text-center leading-6">
-            No review history yet.
-          </Text>
-        </View>
       ) : (
         <>
           {/* Header stats */}
@@ -116,12 +110,20 @@ export function ReviewHistoryModal({
             />
           )}
 
-          {/* Review table */}
-          <ReviewTable
-            reviews={reviews}
-            isCollection={isCollection}
-            refreshing={refreshing}
-          />
+          {/* Review table or empty state */}
+          {reviews.length === 0 ? (
+            <View className="items-center py-16 px-8">
+              <Text className="text-foreground-secondary text-base text-center leading-6">
+                No review history yet.
+              </Text>
+            </View>
+          ) : (
+            <ReviewTable
+              reviews={reviews}
+              isCollection={isCollection}
+              refreshing={refreshing}
+            />
+          )}
         </>
       )}
 
