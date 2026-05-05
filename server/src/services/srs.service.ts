@@ -180,6 +180,11 @@ export function getCurrentStudyDayKey(config: SrsConfig, now = new Date()): stri
   return studyDayKeyFromParts(parts, dueCutoffMinutes(config));
 }
 
+export function getCalendarDayKey(date: Date, timeZone: string): string {
+  const { year, month, day } = getZonedParts(date, timeZone);
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
 export function dueDateStringToDueAt(dueDate: string, config: SrsConfig): Date | null {
   const parsed = parseDayKey(dueDate);
   if (!parsed) return null;

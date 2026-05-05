@@ -23,13 +23,10 @@ import {
   moveNode,
   importDecksFromCsv,
   hydrateSettings,
-  resetDeckToNeverStudied,
-  setDeckDueDate,
   syncReviewTimezone,
   getSetting,
 } from '@/lib/api';
 import type { TreeNode } from '@/lib/types';
-import { formatLocalDateToYmd } from '@/components/pickers/dateUtils';
 import { useEnabledLanguages } from '@/hooks/state/persistent/useSettings';
 import { getLocalSetting } from '@/hooks/state/persistent/settingsStore';
 
@@ -226,19 +223,6 @@ export default function Home() {
             explanation: data.explanation,
           });
 
-          if (data.pendingReset) {
-            await resetDeckToNeverStudied(editNode.id);
-          } else if (data.dueDate.length > 0) {
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(data.dueDate)) {
-              throw new Error('Use YYYY-MM-DD format for due date.');
-            }
-            const initialDueDate = editNode.deck.dueAt
-              ? formatLocalDateToYmd(new Date(editNode.deck.dueAt))
-              : '';
-            if (data.dueDate !== initialDueDate) {
-              await setDeckDueDate(editNode.id, data.dueDate);
-            }
-          }
         }
       } else {
         await createDeckFromPath(data.path, data.topic, data.language, data.cardCount, data.clarification, data.explanation);
@@ -432,7 +416,6 @@ export default function Home() {
         onSubmit={handleSubmit}
         onCsvImport={handleCsvImport}
         onDelete={editNode ? handleDelete : undefined}
-        onResetSchedule={editNode?.deck ? async () => {} : undefined}
         editNode={editNode}
         editNodePath={editNodePathStr}
       />
@@ -444,6 +427,7 @@ export default function Home() {
         visible={historyNode !== null}
         node={historyNode}
         onClose={closeHistory}
+        onScheduleChanged={refresh}
         showActions={historyShowActions}
         onStudyAnyway={
           historyStudyContext && historyNode?.deck?.dueAt != null

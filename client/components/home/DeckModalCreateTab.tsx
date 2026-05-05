@@ -4,7 +4,6 @@ import { useColors } from '@/constants/theme';
 import type { Language, CardCount } from '@/constants/session';
 import { SharedCreationNameField, SharedCreationOptionsSection } from './DeckModalSharedCreationFields';
 import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
-import { DatePicker } from '@/components/pickers/DatePicker';
 import { usePageSheetScrolling } from '@/components/PageSheetScrollContext';
 import { AnimatedCollapsible } from '@/components/AnimatedCollapsible';
 
@@ -13,10 +12,6 @@ interface DeckModalCreateTabProps {
   isEdit: boolean;
   onDelete?: () => void;
   onExport?: () => void;
-  onResetPending?: () => void;
-  editNodeId?: string;
-  dueDate: string;
-  onDueDateChange: (value: string) => void;
   name: string;
   onNameChange: (value: string) => void;
   topic: string;
@@ -38,10 +33,6 @@ export function DeckModalCreateTab({
   isEdit,
   onDelete,
   onExport,
-  onResetPending,
-  editNodeId,
-  dueDate,
-  onDueDateChange,
   name,
   onNameChange,
   topic,
@@ -68,11 +59,6 @@ export function DeckModalCreateTab({
     if (Platform.OS !== 'web' && isScrollingRef?.current) {
       ref.current?.blur();
     }
-  }
-
-  function handleResetSchedule() {
-    onResetPending?.();
-    onDueDateChange('');
   }
 
   return (
@@ -163,36 +149,6 @@ export function DeckModalCreateTab({
             enabledLanguages={enabledLanguages}
           />
         </>
-      )}
-
-      {isEdit && !isCollection && editNodeId && (
-        <View className="mb-6 gap-3">
-          <Text className="text-foreground/80 text-sm font-medium">Review Schedule</Text>
-          <Text className="text-foreground-secondary text-xs">
-            Set when this deck becomes due.
-          </Text>
-
-          <DatePicker
-            value={dueDate}
-            onChange={onDueDateChange}
-            placeholder="Pick due date"
-            popoverPlacement="above"
-            popoverTitle="Due Date"
-            popoverFooter={onResetPending ? (
-              <NeedsConfirmationButton
-                label="Reset to Never Studied"
-                confirmLabel="Tap again to reset"
-                onConfirm={handleResetSchedule}
-                destructive
-              />
-            ) : undefined}
-            androidNeutralButton={onResetPending ? {
-              label: 'Reset',
-              textColor: colors.error,
-              onPress: handleResetSchedule,
-            } : undefined}
-          />
-        </View>
       )}
 
       {isEdit && (onExport || onDelete) && (

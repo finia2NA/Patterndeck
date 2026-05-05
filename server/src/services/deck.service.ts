@@ -7,6 +7,7 @@ import {
   calculateNextReview,
   computeIntervalDaysForDueDate,
   dueDateStringToDueAt,
+  getCalendarDayKey,
   getCurrentStudyDayKey,
   isDueNow,
   resolveDueAt,
@@ -331,13 +332,20 @@ export async function updateDeckSchedule(
     throw new AppError(400, 'INVALID_DUE_DATE', 'dueDate must be YYYY-MM-DD.');
   }
 
+  const now = new Date();
   const dailyDueTime = await getSetting(userId, 'daily_due_time');
   const reviewTimezone = action.clientTimezone ?? await getSetting(userId, 'review_timezone');
   const config = buildSrsConfig(dailyDueTime, reviewTimezone);
-  const dueAt = dueDateStringToDueAt(dueDate, config);
-  if (!dueAt) {
+  const computedDueAt = dueDateStringToDueAt(dueDate, config);
+  if (!computedDueAt) {
     throw new AppError(400, 'INVALID_DUE_DATE', 'Unable to parse dueDate.');
   }
+
+  // If the user picked today's calendar date but we're currently before daily_due_time,
+  // computedDueAt would be in the future (the upcoming daily_due_time) causing isDue=false.
+  // In that case use now so the deck is immediately due.
+  const todayCalendar = getCalendarDayKey(now, config.reviewTimezone);
+  const dueAt = (dueDate === todayCalendar && computedDueAt > now) ? now : computedDueAt;
 
   const intervalDays = computeIntervalDaysForDueDate(dueDate, config);
   await prisma.$transaction(async (tx) => {

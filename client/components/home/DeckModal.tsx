@@ -11,7 +11,6 @@ import type { CsvImportResult } from '@/lib/api';
 import { exportNodeCsv } from '@/lib/api';
 import { DeckModalCreateTab } from './DeckModalCreateTab';
 import { DeckModalCsvTab } from './DeckModalCsvTab';
-import { formatLocalDateToYmd } from '@/components/pickers/dateUtils';
 import { useEnabledLanguages } from '@/hooks/state/persistent/useSettings';
 
 async function triggerCsvDownload(filename: string, csv: string) {
@@ -55,7 +54,6 @@ interface DeckModalProps {
   onSubmit: (data: DeckFormData) => void | Promise<void>;
   onCsvImport?: (data: CsvImportData) => Promise<CsvImportResult>;
   onDelete?: () => void;
-  onResetSchedule?: (nodeId: string) => Promise<void>;
   editNode?: TreeNode | null;
   editNodePath?: string;
   initialData?: Partial<DeckFormData>;
@@ -67,9 +65,7 @@ export interface DeckFormData {
   clarification: string;
   language: Language;
   cardCount: CardCount;
-  dueDate: string;
   explanation?: string;
-  pendingReset?: boolean;
 }
 
 export interface CsvImportData {
@@ -91,7 +87,6 @@ export function DeckModal({
   onSubmit,
   onCsvImport,
   onDelete,
-  onResetSchedule,
   editNode,
   editNodePath,
   initialData,
@@ -106,20 +101,17 @@ export function DeckModal({
   const [clarification, setClarification] = useState('');
   const [language, setLanguage] = useState<Language>('Japanese');
   const [cardCount, setCardCount] = useState<CardCount>(0);
-  const [dueDate, setDueDate] = useState('');
   const [explanation, setExplanation] = useState('');
   const [activeTab, setActiveTab] = useState<'create' | 'csv'>('create');
   const [csvContent, setCsvContent] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<CsvImportStatus>({ state: 'idle' });
   const [submitting, setSubmitting] = useState(false);
-  const [pendingReset, setPendingReset] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setActiveTab('create');
       setCsvContent(null);
       setImportStatus({ state: 'idle' });
-      setPendingReset(false);
       if (isEdit && editNode) {
         setName(editNodePath ?? editNode.name);
         if (editNode.deck) {
@@ -127,12 +119,10 @@ export function DeckModal({
           setClarification(editNode.deck.clarification ?? '');
           setLanguage(editNode.deck.language as Language);
           setCardCount(editNode.deck.cardCount as CardCount);
-          setDueDate(editNode.deck.dueAt ? formatLocalDateToYmd(new Date(editNode.deck.dueAt)) : '');
           setExplanation(editNode.deck.explanation ?? '');
         } else {
           setTopic('');
           setClarification('');
-          setDueDate('');
           setExplanation('');
         }
       } else {
@@ -141,7 +131,6 @@ export function DeckModal({
         setClarification(initialData?.clarification ?? '');
         setLanguage(initialData?.language ?? 'Japanese');
         setCardCount(initialData?.cardCount ?? 0);
-        setDueDate(initialData?.dueDate ?? '');
         setExplanation(initialData?.explanation ?? '');
       }
     }
@@ -166,9 +155,7 @@ export function DeckModal({
         clarification,
         language,
         cardCount,
-        dueDate: dueDate.trim(),
         explanation,
-        pendingReset,
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : 'An error occurred.';
@@ -243,7 +230,7 @@ export function DeckModal({
     : submitting
       ? 'Saving…'
       : isEdit
-        ? (pendingReset ? 'Save & Reset' : 'Save')
+        ? 'Save'
         : 'Create';
   const confirmDisabled = showingCsvTab ? !csvCanImport : !canSubmit || submitting;
   const handleConfirm = showingCsvTab ? handleCsvImport : handleSubmit;
@@ -266,10 +253,6 @@ export function DeckModal({
       isEdit={isEdit}
       onDelete={onDelete}
       onExport={isEdit ? handleExport : undefined}
-      onResetPending={onResetSchedule ? () => setPendingReset(true) : undefined}
-      editNodeId={editNode?.id}
-      dueDate={dueDate}
-      onDueDateChange={setDueDate}
       name={name}
       onNameChange={setName}
       topic={topic}

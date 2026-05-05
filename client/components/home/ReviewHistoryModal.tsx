@@ -4,9 +4,12 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Platform } from 'react
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { PageSheetModal } from '@/components/PageSheetModal';
 import { useColors } from '@/constants/theme';
-import { getDeckReviews, getCollectionReviews } from '@/lib/api';
+import { getDeckReviews, getCollectionReviews, setDeckDueDate, resetDeckToNeverStudied } from '@/lib/api';
 import type { DeckReviewRecord, CollectionReviewRecord } from '@/lib/api';
 import type { TreeNode } from '@/lib/types';
+import { DatePicker } from '@/components/pickers/DatePicker';
+import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
+import { formatLocalDateToYmd } from '@/components/pickers/dateUtils';
 
 const clickOrTap = Platform.OS === 'web' ? 'Click' : 'Tap';
 
@@ -19,6 +22,7 @@ interface ReviewHistoryModalProps {
   onStartNewDeck?: () => void;
   newDeckLimitReached?: boolean;
   showActions?: boolean;
+  onScheduleChanged?: () => void;
 }
 
 export function ReviewHistoryModal({
@@ -29,6 +33,7 @@ export function ReviewHistoryModal({
   onStartNewDeck,
   newDeckLimitReached = false,
   showActions = false,
+  onScheduleChanged,
 }: ReviewHistoryModalProps) {
   const colors = useColors();
   const isCollection = node ? node.deck === null : false;
@@ -87,6 +92,14 @@ export function ReviewHistoryModal({
             collectionDecks={collectionDecks}
           />
 
+          {/* Reschedule */}
+          {!isCollection && node && (
+            <RescheduleSection
+              node={node}
+              onScheduleChanged={onScheduleChanged}
+            />
+          )}
+
           {/* Interval chart */}
           {chronological.length >= 2 && (
             <IntervalChart
@@ -126,6 +139,64 @@ export function ReviewHistoryModal({
         </View>
       )}
     </PageSheetModal>
+  );
+}
+
+// ─── Reschedule Section ───────────────────────────────────────────────────────
+
+function RescheduleSection({
+  node,
+  onScheduleChanged,
+}: {
+  node: TreeNode;
+  onScheduleChanged?: () => void;
+}) {
+  const colors = useColors();
+  const [dueDate, setDueDateState] = useState(
+    node.deck?.dueAt ? formatLocalDateToYmd(new Date(node.deck.dueAt)) : ''
+  );
+
+  useEffect(() => {
+    setDueDateState(node.deck?.dueAt ? formatLocalDateToYmd(new Date(node.deck.dueAt)) : '');
+  }, [node]);
+
+  async function handleDateChange(value: string) {
+    setDueDateState(value);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
+    await setDeckDueDate(node.id, value);
+    onScheduleChanged?.();
+  }
+
+  async function handleReset() {
+    setDueDateState('');
+    await resetDeckToNeverStudied(node.id);
+    onScheduleChanged?.();
+  }
+
+  return (
+    <View className="bg-surface border border-border rounded-2xl p-4 mb-4 gap-2">
+      <Text className="text-foreground/80 text-sm font-medium">Review Schedule</Text>
+      <DatePicker
+        value={dueDate}
+        onChange={handleDateChange}
+        placeholder="Pick due date"
+        popoverPlacement="below"
+        popoverTitle="Due Date"
+        popoverFooter={
+          <NeedsConfirmationButton
+            label="Reset to Never Studied"
+            confirmLabel="Tap again to reset"
+            onConfirm={handleReset}
+            destructive
+          />
+        }
+        androidNeutralButton={{
+          label: 'Reset',
+          textColor: colors.error,
+          onPress: handleReset,
+        }}
+      />
+    </View>
   );
 }
 
