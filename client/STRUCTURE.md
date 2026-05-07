@@ -7,7 +7,6 @@ React Native / Expo app. Communicates with the server via `lib/api.ts` — no di
 ```
 client/
 ├── app/                        ← Expo Router pages (file-based routing)
-│   ├── +html.tsx               ← HTML shell for web export
 │   ├── _layout.tsx             ← Root layout: global CSS, theme vars, analytics, KeyboardProvider, Stack nav
 │   ├── index.tsx               ← Auth guard: checks JWT → /onboarding or /home
 │   ├── onboarding.tsx          ← Multi-step carousel: welcome, how-it-works, alpha warning, sign-up, API key
