@@ -11,5 +11,19 @@
       "distribution": "internal"
     },
     "production": {}
+  },
+  "submit": {
+    "android-internal": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "completed"
+      }
+    },
+    "android-production": {
+      "android": {
+        "track": "production",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }

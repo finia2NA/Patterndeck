@@ -1,12 +1,13 @@
 import '../global.css';
 import { type ReactNode, useEffect } from 'react';
-import { View, useColorScheme, Platform } from 'react-native';
+import { View, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ColorsContext, darkThemeVars, lightThemeVars, dark, light } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getMe, hydrateSettings } from '@/lib/api';
 import { AnalyticsProvider, analytics } from '@/lib/analytics';
 import { getAuthToken, setUserId } from '@/lib/storage';

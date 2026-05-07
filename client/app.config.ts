@@ -6,7 +6,7 @@ const devServerHost = process.env.DEV_SERVER_HOST || 'localhost';
 const devServerPort = process.env.DEV_SERVER_PORT || '3001';
 const productionBackendBaseUrl = process.env.EXPO_PUBLIC_API_URL || 'https://patterndeck.richardhanss.de/api/v1';
 const backendDebugUiEnabled = process.env.BACKEND_DEBUG_UI !== '0';
-const expoProjectId = '156c0c3e-7336-42b4-9805-a98c8fd83832';
+const expoProjectId = process.env.EXPO_PUBLIC_EXPO_PROJECT_ID || '156c0c3e-7336-42b4-9805-a98c8fd83832';
 const defaultAndroidGoogleServicesFile = './google-services.json';
 const androidGoogleServicesFile = process.env.ANDROID_GOOGLE_SERVICES_FILE
   || (existsSync(path.resolve(__dirname, defaultAndroidGoogleServicesFile))

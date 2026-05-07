@@ -176,6 +176,23 @@ client/   React Native / Expo app (iOS, Android, web) server/   Express + Prisma
 
 `pnpm install cp server/.env.example server/.env cp client/.env.example client/.env pnpm db:migrate`
 
+Client `.env`:
+
+```env
+DEV_SERVER_HOST=localhost
+DEV_SERVER_PORT=3001
+EXPO_PUBLIC_API_URL=https://patterndeck.richardhanss.de/api/v1
+ANDROID_GOOGLE_SERVICES_FILE=
+ANDROID_UPLOAD_STORE_FILE=
+ANDROID_UPLOAD_STORE_PASSWORD=
+ANDROID_UPLOAD_KEY_ALIAS=
+ANDROID_UPLOAD_KEY_PASSWORD=
+EXPO_PUBLIC_EXPO_PROJECT_ID=156c0c3e-7336-42b4-9805-a98c8fd83832
+EXPO_PUBLIC_POSTHOG_KEY=
+EXPO_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+EXPO_PUBLIC_ANALYTICS_ENABLED=0
+```
+
 ### Run
 
 `pnpm backend`
@@ -192,6 +209,12 @@ client/   React Native / Expo app (iOS, Android, web) server/   Express + Prisma
 Deployment is handled via SSH-based scripts in deploy/.
 
 `./deploy/deploy.sh`
+
+Android internal testing is built locally and submitted with EAS Submit:
+
+`pnpm ship:android`
+
+Set `ANDROID_SUBMIT_PROFILE=android-production` to submit the local AAB to the production track as a draft.
 
 ---
 
