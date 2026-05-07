@@ -22,6 +22,7 @@ interface ExplanationChatProps {
   deckTopic?: string;
   language?: string;
   disabled?: boolean;
+  onCostChange?: (cost: number) => void;
 }
 
 export function ExplanationChat({
@@ -32,6 +33,7 @@ export function ExplanationChat({
   deckTopic,
   language,
   disabled,
+  onCostChange,
 }: ExplanationChatProps) {
   const colors = useColors();
   const { t } = useI18n();
@@ -62,6 +64,7 @@ export function ExplanationChat({
       const result = await editExplanationAI(nodeId, explanation, trimmed, messages);
       onExplanationChange(result.explanation);
       setTotalCost(c => c + result.cost);
+      onCostChange?.(result.cost);
       setMessages(prev => [...prev, { role: 'assistant', content: result.summary || t('editor.changesApplied') }]);
       analytics.track('explanation_edit_requested', {
         deck_id: nodeId,

@@ -29,7 +29,7 @@ export default function EditExplanationPage() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [editCount, setEditCount] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
-  const [showDiff, setShowDiff] = useState(true);
+  const [editorRevision, setEditorRevision] = useState(0);
   const dirty = explanation !== originalExplanation;
 
   useEffect(() => {
@@ -40,6 +40,7 @@ export default function EditExplanationPage() {
         const exp = deck.explanation ?? '';
         setExplanation(exp);
         setOriginalExplanation(exp);
+        setEditorRevision(r => r + 1);
         setDeckTopic(deck.topic);
         setLanguage(deck.language);
         setNodeName(path);
@@ -103,6 +104,12 @@ export default function EditExplanationPage() {
     setEditCount(c => c + 1);
   }
 
+  function handleExternalExplanationChange(text: string) {
+    setExplanation(text);
+    setEditorRevision(r => r + 1);
+    setEditCount(c => c + 1);
+  }
+
   if (!isLargeScreen) {
     return (
       <View className="flex-1 bg-background items-center justify-center px-8 gap-4">
@@ -148,19 +155,8 @@ export default function EditExplanationPage() {
           }
         </View>
 
-        {/* Right: diff toggle + save */}
+        {/* Right: save */}
         <View className="flex-row items-center gap-2 flex-1" style={{ justifyContent: 'flex-end' }}>
-          {dirty && (
-            <TouchableOpacity
-              className={`px-3 py-1.5 rounded-lg border ${showDiff ? 'border-primary bg-primary/10' : 'border-border bg-background-muted'}`}
-              onPress={() => setShowDiff(v => !v)}
-              activeOpacity={0.7}
-            >
-              <Text className={`text-xs font-medium ${showDiff ? 'text-primary' : 'text-foreground-secondary'}`}>
-                {t('editor.diff')}
-              </Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity
             className={`px-5 py-2 rounded-xl ${dirty && !saving ? 'bg-primary' : 'bg-background-muted'}`}
             onPress={handleSave}
@@ -177,14 +173,14 @@ export default function EditExplanationPage() {
       {/* Three-panel editor */}
       <ResizablePanels>
         {[
-          <MonacoEditor
-            key="monaco"
-            value={explanation}
-            onChange={handleExplanationChange}
-            readOnly={loading || aiGenerating}
-            original={originalExplanation}
-            showDiff={showDiff}
-          />,
+          <View key="monaco" className="flex-1 relative">
+            <MonacoEditor
+              value={explanation}
+              onChange={handleExplanationChange}
+              readOnly={loading || aiGenerating}
+              externalRevision={editorRevision}
+            />
+          </View>,
           <ScrollView
             key="preview"
             className="flex-1"
@@ -201,8 +197,9 @@ export default function EditExplanationPage() {
           <ExplanationChat
             key="chat"
             explanation={explanation}
-            onExplanationChange={handleExplanationChange}
+            onExplanationChange={handleExternalExplanationChange}
             onGeneratingChange={setAiGenerating}
+            onCostChange={(cost) => setTotalCost(c => c + cost)}
             nodeId={nodeId}
             deckTopic={deckTopic}
             language={language}
