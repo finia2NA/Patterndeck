@@ -18,17 +18,17 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', authRouter);
-app.use('/api/tree', treeRouter);
-app.use('/api/decks', decksRouter);
-app.use('/api/collections', collectionsRouter);
-app.use('/api/nodes', collectionsRouter);
-app.use('/api/settings', settingsRouter);
-app.use('/api/notifications', notificationsRouter);
-app.use('/api/ai', claudeProxyRouter);
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/tree', treeRouter);
+app.use('/api/v1/decks', decksRouter);
+app.use('/api/v1/collections', collectionsRouter);
+app.use('/api/v1/nodes', collectionsRouter);
+app.use('/api/v1/settings', settingsRouter);
+app.use('/api/v1/notifications', notificationsRouter);
+app.use('/api/v1/ai', claudeProxyRouter);
 
 // Health check
-app.get('/api/health', (_req, res) => {
+app.get('/api/v1/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 

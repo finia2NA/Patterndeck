@@ -50,16 +50,16 @@ export function resolveBackendBaseUrlForPlatform(baseUrl: string): string {
 
 function getConfiguredBaseUrl(): string {
   if (Platform.OS === 'web' && !__DEV__) {
-    // Production web: same origin, nginx proxies /api → Express
-    return '/api';
+    // Production web: same origin, nginx proxies /api/v1 → Express
+    return '/api/v1';
   }
   if (!__DEV__) {
-    return Constants.expoConfig?.extra?.productionBackendBaseUrl ?? 'https://patterndeck.richardhanss.de/api';
+    return Constants.expoConfig?.extra?.productionBackendBaseUrl ?? 'https://patterndeck.richardhanss.de/api/v1';
   }
   // Dev (all platforms) and native prod: use configured host
   const host = Constants.expoConfig?.extra?.devServerHost ?? 'localhost';
   const port = Constants.expoConfig?.extra?.devServerPort ?? '3001';
-  return resolveBackendBaseUrlForPlatform(`http://${host}:${port}/api`);
+  return resolveBackendBaseUrlForPlatform(`http://${host}:${port}/api/v1`);
 }
 
 async function getBaseUrl(): Promise<string> {
