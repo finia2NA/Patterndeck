@@ -262,9 +262,11 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
               disabled={saving || notificationSetupBusy}
             />
           </SettingsRow>
-          <SettingsRow label={t('settings.reminderTime')} description={t('settings.reminderTimeDescription')}>
-            <TimePicker value={notificationTime} onChange={(next: string) => setNotificationTime(normalizeTime(next))} disabled={notificationsEnabled !== 'on'} />
-          </SettingsRow>
+          <AnimatedCollapsible expanded={notificationsEnabled === 'on'}>
+            <SettingsRow label={t('settings.reminderTime')} description={t('settings.reminderTimeDescription')}>
+              <TimePicker value={notificationTime} onChange={(next: string) => setNotificationTime(normalizeTime(next))} />
+            </SettingsRow>
+          </AnimatedCollapsible>
         </SectionCard>
       ) : null}
 

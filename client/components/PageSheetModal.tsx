@@ -150,7 +150,6 @@ export function PageSheetModal({
           style={[styles.headerButton, { width: cancelButtonWidth }]}
           textStyle={styles.cancelText}
           fontSize={16}
-          contentAlignment="left"
           horizontalPadding={0}
           verticalPadding={7}
           cornerRadius={18}
@@ -175,7 +174,6 @@ export function PageSheetModal({
             textStyle={styles.confirmText}
             fontSize={16}
             fontWeight="semibold"
-            contentAlignment="right"
             horizontalPadding={0}
             verticalPadding={7}
             cornerRadius={18}
@@ -222,7 +220,7 @@ export function PageSheetModal({
         onRequestClose={handleCancel}
       >
         <View style={[styles.container, themeVars]} className="bg-background">
-          {makeHeader(insets.top + 8)}
+          {makeHeader(Math.min(insets.top, 12) + 8)}
           {scrollView(insets.bottom + 24)}
         </View>
       </Modal>
