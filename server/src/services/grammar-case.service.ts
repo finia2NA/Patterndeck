@@ -448,6 +448,18 @@ function evidenceFromAnswers(answers: string[] | undefined): {
   };
 }
 
+export async function persistImportedCases(
+  deckId: string,
+  topic: string,
+  language: string,
+  explanation: string,
+  rawCases: ExtractedGrammarCase[],
+): Promise<void> {
+  const sourceHash = sourceHashFor(topic, language, explanation);
+  const cases = normalizeExtractedCases(rawCases);
+  await persistCases(deckId, sourceHash, cases);
+}
+
 export async function updateCaseStatsFromReview(
   tx: GrammarCaseTx,
   userId: string,

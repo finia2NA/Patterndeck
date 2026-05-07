@@ -6,7 +6,8 @@ import { AppError } from '../middleware/errorHandler.js';
 import { enqueueExplanation, enqueueGrammarCaseExtraction } from '../services/scheduler.service.js';
 import { capture } from '../services/analytics.service.js';
 import { getNodePath } from '../services/tree.service.js';
-import { getGrammarCaseSummaries } from '../services/grammar-case.service.js';
+import { getGrammarCaseSummaries, persistImportedCases, type ExtractedGrammarCase } from '../services/grammar-case.service.js';
+import { setGrammarCaseReady } from '../services/deck.service.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const CSV_MAX_DATA_ROWS = 5000;
@@ -68,6 +69,7 @@ interface CsvRow {
   topic: string;
   clarification: string;
   explanation: string;
+  cases: ExtractedGrammarCase[] | null;
   lineNumber: number;
   rawLine: string;
 }
@@ -83,10 +85,11 @@ function normalize(s: string): string {
 }
 
 const HEADER_VARIANTS: Record<string, string[]> = {
-  topic:       ['topic'],
-  deckname:    ['deckname', 'name', 'deck'],
+  topic:         ['topic'],
+  deckname:      ['deckname', 'name', 'deck'],
   clarification: ['clarification', 'description', 'details', 'notes'],
-  explanation: ['explanation'],
+  explanation:   ['explanation'],
+  cases:         ['cases', 'grammarcases'],
 };
 
 function matchHeader(field: string): string | null {
@@ -99,6 +102,17 @@ function matchHeader(field: string): string | null {
 
 function looksLikeHeader(fields: string[]): boolean {
   return fields.some(f => matchHeader(f) === 'topic');
+}
+
+function parseCasesColumn(raw: string): ExtractedGrammarCase[] | null {
+  if (!raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.filter((item): item is ExtractedGrammarCase => typeof item === 'object' && item !== null);
+  } catch {
+    return null;
+  }
 }
 
 function parseCsv(raw: string): { rows: CsvRow[]; skipped: CsvSkip[]; dataRowCount: number } {
@@ -118,6 +132,7 @@ function parseCsv(raw: string): { rows: CsvRow[]; skipped: CsvSkip[]; dataRowCou
   let nameIdx = 0;
   let clarificationIdx = 2;
   let explIdx = 3;
+  let casesIdx = -1;
   let dataStart = 0;
 
   if (hasHeader) {
@@ -126,12 +141,14 @@ function parseCsv(raw: string): { rows: CsvRow[]; skipped: CsvSkip[]; dataRowCou
     nameIdx = -1;
     clarificationIdx = -1;
     explIdx = -1;
+    casesIdx = -1;
     for (let i = 0; i < firstFields.length; i++) {
       const match = matchHeader(firstFields[i]);
       if (match === 'topic') topicIdx = i;
       else if (match === 'deckname') nameIdx = i;
       else if (match === 'clarification') clarificationIdx = i;
       else if (match === 'explanation') explIdx = i;
+      else if (match === 'cases') casesIdx = i;
     }
     if (topicIdx === -1) {
       throw new AppError(400, 'INVALID_CSV', 'Header row detected but no "Topic" column found.');
@@ -154,7 +171,8 @@ function parseCsv(raw: string): { rows: CsvRow[]; skipped: CsvSkip[]; dataRowCou
     const deckName = unescape((nameIdx >= 0 ? fields[nameIdx] ?? '' : '').trim() || topic);
     const clarification = unescape((clarificationIdx >= 0 ? fields[clarificationIdx] ?? '' : '').trim());
     const explanation = unescape((explIdx >= 0 ? fields[explIdx] ?? '' : '').trim());
-    rows.push({ deckName, topic, clarification, explanation, lineNumber, rawLine: text });
+    const cases = parseCasesColumn(casesIdx >= 0 ? (fields[casesIdx] ?? '') : '');
+    rows.push({ deckName, topic, clarification, explanation, cases, lineNumber, rawLine: text });
   }
 
   return { rows, skipped, dataRowCount };
@@ -201,6 +219,9 @@ decksRouter.post('/import-csv', upload.single('file'), async (req, res, next) =>
         if (existingExplanation === undefined) {
           enqueueExplanation(userId, nodeId);
           queuedCount++;
+        } else if (row.cases && row.cases.length > 0) {
+          await persistImportedCases(nodeId, row.topic, String(language), existingExplanation, row.cases);
+          await setGrammarCaseReady(nodeId);
         } else {
           await enqueueGrammarCaseExtraction(userId, nodeId, {
             analyticsContext: {

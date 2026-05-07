@@ -121,7 +121,8 @@ export async function getNodePath(userId: string, nodeId: string): Promise<strin
   return parts.join('::');
 }
 
-interface ExportRow { deckName: string; topic: string; clarification: string; explanation: string; }
+interface ExportCase { caseKey: string; label: string; ruleSummary: string; generationHint: string; baseWeight: number; }
+interface ExportRow { deckName: string; topic: string; clarification: string; explanation: string; cases: string; }
 
 /** BFS to collect all nodes, then DFS to build export rows with relative paths. */
 export async function getExportRows(
@@ -135,7 +136,8 @@ export async function getExportRows(
 
   const allNodes: Array<{
     id: string; parentId: string | null; name: string;
-    deck: { topic: string; clarification: string | null; explanation: string | null } | null; childIds: string[];
+    deck: { topic: string; clarification: string | null; explanation: string | null; grammarCases: ExportCase[] } | null;
+    childIds: string[];
   }> = [];
 
   const queue = [nodeId];
@@ -144,14 +146,28 @@ export async function getExportRows(
     const nodes = await prisma.node.findMany({
       where: { id: { in: batch }, userId },
       include: {
-        deck: { select: { topic: true, clarification: true, explanation: true } },
+        deck: {
+          select: {
+            topic: true, clarification: true, explanation: true,
+            grammarCases: {
+              where: { active: true },
+              orderBy: [{ sortOrder: 'asc' }],
+              select: { caseKey: true, label: true, ruleSummary: true, generationHint: true, baseWeight: true },
+            },
+          },
+        },
         children: { select: { id: true }, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
       },
     });
     for (const node of nodes) {
       allNodes.push({
         id: node.id, parentId: node.parentId, name: node.name,
-        deck: node.deck ? { topic: node.deck.topic, clarification: node.deck.clarification, explanation: node.deck.explanation } : null,
+        deck: node.deck ? {
+          topic: node.deck.topic,
+          clarification: node.deck.clarification,
+          explanation: node.deck.explanation,
+          grammarCases: node.deck.grammarCases as ExportCase[],
+        } : null,
         childIds: node.children.map(c => c.id),
       });
       for (const child of node.children) queue.push(child.id);
@@ -174,12 +190,21 @@ export async function getExportRows(
 
   const rows: ExportRow[] = [];
 
+  function serializeCases(cases: ExportCase[]): string {
+    if (cases.length === 0) return '';
+    return JSON.stringify(cases.map(c => ({
+      caseKey: c.caseKey, label: c.label, ruleSummary: c.ruleSummary,
+      generationHint: c.generationHint, baseWeight: c.baseWeight,
+    })));
+  }
+
   if (startNode.deck) {
     rows.push({
       deckName: startNode.name,
       topic: startNode.deck.topic,
       clarification: startNode.deck.clarification ?? '',
       explanation: startNode.deck.explanation ?? '',
+      cases: serializeCases(startNode.deck.grammarCases),
     });
   } else {
     function dfs(id: string) {
@@ -191,6 +216,7 @@ export async function getExportRows(
           topic: node.deck.topic,
           clarification: node.deck.clarification ?? '',
           explanation: node.deck.explanation ?? '',
+          cases: serializeCases(node.deck.grammarCases),
         });
       }
       for (const childId of node.childIds) dfs(childId);
