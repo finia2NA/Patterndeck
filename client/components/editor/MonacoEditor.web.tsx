@@ -1,7 +1,6 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react';
-import { useColorScheme } from 'react-native';
-import MonacoReact, { DiffEditor, type OnMount, type DiffOnMount } from '@monaco-editor/react';
-import type { editor } from 'monaco-editor';
+import { useColorScheme, Appearance } from 'react-native';
+import MonacoReact, { DiffEditor } from '@monaco-editor/react';
 import { light, dark } from '@/constants/theme';
 
 interface MonacoEditorProps {
@@ -13,18 +12,17 @@ interface MonacoEditorProps {
   showDiff?: boolean;
 }
 
-let themesDefined = false;
-
 export function MonacoEditor({ value, onChange, readOnly, externalRevision = 0, original, showDiff }: MonacoEditorProps) {
   const colorScheme = useColorScheme();
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const editorRef = useRef<any>(null);
+  const monacoRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
   const applyingExternalValueRef = useRef(false);
   const appliedExternalRevisionRef = useRef(externalRevision);
   const [pinnedModified, setPinnedModified] = useState(value);
 
   const beforeMount = useCallback((monaco: any) => {
-    if (themesDefined) return;
+    monacoRef.current = monaco;
 
     // Define light theme
     monaco.editor.defineTheme('grammarCrammerLight', {
@@ -77,8 +75,6 @@ export function MonacoEditor({ value, onChange, readOnly, externalRevision = 0, 
         'editorIndentGuide.activeBackground': dark.foreground_subtle,
       }
     });
-
-    themesDefined = true;
   }, []);
 
   useEffect(() => {
@@ -104,7 +100,7 @@ export function MonacoEditor({ value, onChange, readOnly, externalRevision = 0, 
     }
   }, [value, externalRevision]);
 
-  const commonOptions = useMemo<editor.IStandaloneEditorConstructionOptions>(() => ({
+  const commonOptions = useMemo<any>(() => ({
     wordWrap: 'on',
     minimap: { enabled: false },
     fontSize: 14,
@@ -118,9 +114,18 @@ export function MonacoEditor({ value, onChange, readOnly, externalRevision = 0, 
     lineNumbersMinChars: 0,
   }), [readOnly]);
 
-  const handleMount: OnMount = (ed) => {
+  const handleMount = (ed: any) => {
     editorRef.current = ed;
     appliedExternalRevisionRef.current = externalRevision;
+
+    // Apply theme after mount
+    if (monacoRef.current) {
+      const scheme = Appearance.getColorScheme();
+      monacoRef.current.editor.setTheme(
+        scheme === 'dark' ? 'grammarCrammerDark' : 'grammarCrammerLight'
+      );
+    }
+
     if (ed.getValue() !== value) {
       applyingExternalValueRef.current = true;
       try {
@@ -137,10 +142,18 @@ export function MonacoEditor({ value, onChange, readOnly, externalRevision = 0, 
     });
   };
 
-  const handleDiffMount: DiffOnMount = (diffEditor) => {
+  const handleDiffMount = (diffEditor: any) => {
     const modifiedEditor = diffEditor.getModifiedEditor();
     editorRef.current = modifiedEditor;
     appliedExternalRevisionRef.current = externalRevision;
+
+    // Apply theme after mount
+    if (monacoRef.current) {
+      const scheme = Appearance.getColorScheme();
+      monacoRef.current.editor.setTheme(
+        scheme === 'dark' ? 'grammarCrammerDark' : 'grammarCrammerLight'
+      );
+    }
 
     if (modifiedEditor.getValue() !== value) {
       applyingExternalValueRef.current = true;
@@ -158,15 +171,27 @@ export function MonacoEditor({ value, onChange, readOnly, externalRevision = 0, 
     });
   };
 
-  const editorKey = colorScheme;
+  // Apply theme when colorScheme changes using Appearance API
+  useEffect(() => {
+    const applyTheme = () => {
+      if (monacoRef.current) {
+        const scheme = Appearance.getColorScheme();
+        monacoRef.current.editor.setTheme(
+          scheme === 'dark' ? 'grammarCrammerDark' : 'grammarCrammerLight'
+        );
+      }
+    };
+
+    // Listen for changes
+    const subscription = Appearance.addChangeListener(applyTheme);
+    return () => subscription.remove();
+  }, []);
 
   if (showDiff && original !== undefined) {
     return (
       <DiffEditor
-        key={editorKey}
         height="100%"
         language="markdown"
-        theme={colorScheme === 'dark' ? 'grammarCrammerDark' : 'grammarCrammerLight'}
         original={original}
         modified={pinnedModified}
         beforeMount={beforeMount}
@@ -182,10 +207,8 @@ export function MonacoEditor({ value, onChange, readOnly, externalRevision = 0, 
 
   return (
     <MonacoReact
-      key={editorKey}
       height="100%"
       language="markdown"
-      theme={colorScheme === 'dark' ? 'grammarCrammerDark' : 'grammarCrammerLight'}
       defaultValue={value}
       beforeMount={beforeMount}
       onMount={handleMount}
