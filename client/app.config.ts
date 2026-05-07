@@ -69,6 +69,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './plugins/without-ios-push-notifications',
     '@react-native-community/datetimepicker',
     [
+      'expo-build-properties',
+      {
+        ios: {
+          buildReactNativeFromSource: true,
+          ccacheEnabled: true,
+        },
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         image: './assets/images/splash-icon.png',

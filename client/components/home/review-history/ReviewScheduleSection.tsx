@@ -7,6 +7,7 @@ import { formatLocalDateToYmd } from '@/components/pickers/dateUtils';
 import { useColors } from '@/constants/theme';
 import { resetDeckToNeverStudied, setDeckDueDate } from '@/lib/api';
 import type { TreeNode } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 
 interface ReviewScheduleSectionProps {
   node: TreeNode;
@@ -20,6 +21,7 @@ export function ReviewScheduleSection({
   onReviewsChanged,
 }: ReviewScheduleSectionProps) {
   const colors = useColors();
+  const { t } = useI18n();
   const [dueDate, setDueDateState] = useState(
     node.deck?.dueAt ? formatLocalDateToYmd(new Date(node.deck.dueAt)) : ''
   );
@@ -45,23 +47,23 @@ export function ReviewScheduleSection({
 
   return (
     <View className="bg-surface border border-border rounded-2xl p-4 mb-4 gap-2">
-      <Text className="text-foreground/80 text-sm font-medium">Review Schedule</Text>
+      <Text className="text-foreground/80 text-sm font-medium">{t('history.reviewSchedule')}</Text>
       <DatePicker
         value={dueDate}
         onChange={handleDateChange}
-        placeholder="Pick due date"
+        placeholder={t('picker.pickDueDate')}
         popoverPlacement="below"
-        popoverTitle="Due Date"
+        popoverTitle={t('picker.dueDate')}
         popoverFooter={
           <NeedsConfirmationButton
-            label="Reset to Never Studied"
-            confirmLabel="Tap again to reset"
+            label={t('picker.resetToNeverStudied')}
+            confirmLabel={t('picker.tapAgainReset')}
             onConfirm={handleReset}
             destructive
           />
         }
         androidNeutralButton={{
-          label: 'Reset',
+          label: t('common.reset'),
           textColor: colors.error,
           onPress: handleReset,
         }}

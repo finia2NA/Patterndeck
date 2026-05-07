@@ -1,0 +1,7 @@
+{
+  "platforms": ["ios"],
+  "ios": {
+    "modules": ["NativeDateTimePickerModule"],
+    "podspecPath": "native-date-time-picker.podspec"
+  }
+}

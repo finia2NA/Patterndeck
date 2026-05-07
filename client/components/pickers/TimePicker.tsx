@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { normalizeTime, splitTime } from './timeUtils';
-import { dismissPickerKeyboard, openAndroidTimePicker, useDateTimePickerModule } from './dateTimePickerPlatform';
+import { dismissPickerKeyboard, openAndroidTimePicker, openIosTimePicker, useDateTimePickerModule } from './dateTimePickerPlatform';
 import { PlatformPopover } from './PlatformPopover';
 import { TimePickerContent } from './TimePickerContent';
 import { TimePickerTrigger } from './TimePickerTrigger';
+import { useColors } from '@/constants/theme';
+import { useI18n } from '@/lib/i18n';
 
 interface TimePickerProps {
   value: string;
@@ -37,6 +39,8 @@ function useNativeWebTimeInput() {
 }
 
 export function TimePicker({ value, onChange, disabled = false }: TimePickerProps) {
+  const colors = useColors();
+  const { t } = useI18n();
   const nativePickerModule = useDateTimePickerModule();
   const preferNativeWebTimeInput = useNativeWebTimeInput();
 
@@ -78,10 +82,22 @@ export function TimePicker({ value, onChange, disabled = false }: TimePickerProp
       return;
     }
 
+    if (openIosTimePicker(initial, (selected) => {
+      const next = `${String(selected.getHours()).padStart(2, '0')}:${String(selected.getMinutes()).padStart(2, '0')}`;
+      onChange(normalizeTime(next));
+    }, {
+      title: t('picker.dueTime'),
+      cancelText: t('common.cancel'),
+      confirmText: t('common.done'),
+      accentColor: colors.primary,
+    })) {
+      return;
+    }
+
     setDraftHour(nextHour);
     setDraftMinute(nextMinute);
     openPopover();
-  }, [disabled, nativePickerModule, onChange, textValue]);
+  }, [colors.primary, disabled, nativePickerModule, onChange, t, textValue]);
 
   function handleDone() {
     const next = normalizeTime(`${draftHour}:${draftMinute}`);
@@ -117,7 +133,7 @@ export function TimePicker({ value, onChange, disabled = false }: TimePickerProp
 
   return (
     <PlatformPopover
-      title="Due Time"
+      title={t('picker.dueTime')}
       // Mobile browsers handle their native time control more reliably than our custom popover.
       disabled={disabled || preferNativeWebTimeInput}
       fallbackHeight={230}

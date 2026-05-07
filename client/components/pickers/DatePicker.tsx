@@ -2,8 +2,10 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react
 import { formatLocalDateToYmd, parseYmd } from './dateUtils';
 import { DatePickerContent } from './DatePickerContent';
 import { DatePickerTrigger } from './DatePickerTrigger';
-import { dismissPickerKeyboard, openAndroidDatePicker, useDateTimePickerModule } from './dateTimePickerPlatform';
+import { dismissPickerKeyboard, openAndroidDatePicker, openIosDatePicker, useDateTimePickerModule } from './dateTimePickerPlatform';
 import { PlatformPopover } from './PlatformPopover';
+import { useColors } from '@/constants/theme';
+import { useI18n } from '@/lib/i18n';
 
 interface DatePickerProps {
   value: string;
@@ -23,14 +25,18 @@ interface DatePickerProps {
 export function DatePicker({
   value,
   onChange,
-  placeholder = 'Pick date',
+  placeholder,
   disabled = false,
   popoverPlacement = 'auto',
-  popoverTitle = 'Select Date',
+  popoverTitle,
   popoverFooter,
   androidNeutralButton,
 }: DatePickerProps) {
+  const colors = useColors();
+  const { t } = useI18n();
   const nativePickerModule = useDateTimePickerModule();
+  const displayPlaceholder = placeholder ?? t('picker.pickDate');
+  const displayTitle = popoverTitle ?? t('picker.selectDate');
   const selectedDate = useMemo(() => parseYmd(value), [value]);
   const [draftDate, setDraftDate] = useState<Date | null>(selectedDate);
   const [month, setMonth] = useState<Date>(selectedDate ?? new Date());
@@ -58,10 +64,26 @@ export function DatePicker({
       return;
     }
 
+    if (openIosDatePicker(current, (selected) => {
+      onChange(formatLocalDateToYmd(selected));
+    }, {
+      title: displayTitle,
+      cancelText: t('common.cancel'),
+      confirmText: t('common.done'),
+      accentColor: colors.primary,
+      resetButton: androidNeutralButton ? {
+        label: androidNeutralButton.label,
+        textColor: androidNeutralButton.textColor,
+        onPress: androidNeutralButton.onPress,
+      } : undefined,
+    })) {
+      return;
+    }
+
     setDraftDate(selectedDate);
     setMonth(new Date(current.getFullYear(), current.getMonth(), 1));
     openPopover();
-  }, [androidNeutralButton, disabled, nativePickerModule, onChange, selectedDate]);
+  }, [androidNeutralButton, colors.primary, disabled, displayTitle, nativePickerModule, onChange, selectedDate, t]);
 
   function handleDone() {
     if (draftDate) onChange(formatLocalDateToYmd(draftDate));
@@ -69,7 +91,7 @@ export function DatePicker({
 
   return (
     <PlatformPopover
-      title={popoverTitle}
+      title={displayTitle}
       disabled={disabled}
       placement={popoverPlacement}
       fallbackHeight={430}
@@ -83,7 +105,7 @@ export function DatePicker({
       trigger={({ open, openPopover, closePopover }) => (
         <DatePickerTrigger
           value={value}
-          placeholder={placeholder}
+          placeholder={displayPlaceholder}
           disabled={disabled}
           onPress={() => {
             if (open) {

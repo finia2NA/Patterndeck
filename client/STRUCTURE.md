@@ -68,8 +68,8 @@ client/
 │   │   ├── DatePickerTrigger.tsx / .web.tsx
 │   │   ├── TimePickerContent.tsx / .web.tsx
 │   │   ├── TimePickerTrigger.tsx / .web.tsx
-│   │   ├── PlatformPopover.tsx / .web.tsx  ← iOS sheet vs web popover
-│   │   ├── dateTimePickerPlatform.ts / .web.ts
+│   │   ├── PlatformPopover.tsx / .web.tsx  ← Legacy iOS sheet fallback vs web popover
+│   │   ├── dateTimePickerPlatform.ts / .ios.ts / .web.ts
 │   │   ├── dateUtils.ts / timeUtils.ts     ← Formatting helpers
 │   │   └── useWebPopoverPosition.ts        ← Web popover anchor positioning
 │   │
@@ -116,6 +116,7 @@ client/
 │   └── session.ts              ← Re-exports from @patterndeck/shared (languages, card count options)
 │
 ├── modules/
+│   ├── native-date-time-picker/ ← Custom iOS page-sheet date/time picker presenter
 │   ├── pill-dropdown/          ← Custom native dropdown module (iOS + web implementations)
 │   └── platform-button/        ← Custom native iOS UIButton module
 │

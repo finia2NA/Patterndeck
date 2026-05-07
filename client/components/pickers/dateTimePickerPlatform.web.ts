@@ -20,3 +20,19 @@ export function openAndroidTimePicker(
 ) {
   return false;
 }
+
+export function openIosDatePicker(
+  _value: Date,
+  _onSelected: (selected: Date) => void,
+  _options: unknown = {},
+) {
+  return false;
+}
+
+export function openIosTimePicker(
+  _value: Date,
+  _onSelected: (selected: Date) => void,
+  _options: unknown = {},
+) {
+  return false;
+}

@@ -198,6 +198,8 @@ EXPO_PUBLIC_ANALYTICS_ENABLED=0
 `pnpm backend`
 `pnpm start`
 
+iOS native builds use `expo-build-properties` to build React Native from source and enable ccache. Install ccache locally with `brew install ccache` before repeated iOS builds for faster rebuilds.
+
 ### Check
 
 `pnpm lint`
