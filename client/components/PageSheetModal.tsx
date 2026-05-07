@@ -79,12 +79,23 @@ export function PageSheetModal({
   const [shown, setShown] = useState(false);
   const slideY = useRef(new Animated.Value(height)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const latestHeightRef = useRef(height);
+  const wasVisibleRef = useRef(false);
+
+  useEffect(() => {
+    latestHeightRef.current = height;
+  }, [height]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    if (visible) {
+    const wasVisible = wasVisibleRef.current;
+    wasVisibleRef.current = visible;
+
+    if (visible && !wasVisible) {
       setShown(true);
-      slideY.setValue(height);
+      slideY.stopAnimation();
+      backdropOpacity.stopAnimation();
+      slideY.setValue(latestHeightRef.current);
       backdropOpacity.setValue(0);
       Animated.parallel([
         Animated.spring(slideY, {
@@ -100,8 +111,8 @@ export function PageSheetModal({
         }),
       ]).start();
     }
-    if (!visible) setShown(false);
-  }, [visible, height, slideY, backdropOpacity]);
+    if (!visible && wasVisible) setShown(false);
+  }, [visible, slideY, backdropOpacity]);
 
   const animateOut = useCallback((then: () => void) => {
     if (Platform.OS !== 'web') {
@@ -110,7 +121,7 @@ export function PageSheetModal({
     }
     Animated.parallel([
       Animated.timing(slideY, {
-        toValue: height,
+        toValue: latestHeightRef.current,
         duration: 180,
         useNativeDriver: true,
       }),
@@ -123,7 +134,7 @@ export function PageSheetModal({
       setShown(false);
       then();
     });
-  }, [height, slideY, backdropOpacity]);
+  }, [slideY, backdropOpacity]);
 
   const handleCancel = useCallback(() => {
     animateOut(onCancel);

@@ -119,6 +119,15 @@
     </style>
     <script>
       (function () {
+        var isIOSWebKit =
+          /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        var viewport = document.querySelector('meta[name="viewport"]');
+
+        if (isIOSWebKit && viewport && viewport.content.indexOf('maximum-scale') === -1) {
+          viewport.content += ', maximum-scale=1';
+        }
+
         var appReady = false;
         var resourcesLoaded = document.readyState === 'complete';
 
