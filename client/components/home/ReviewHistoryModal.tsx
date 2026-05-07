@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
@@ -43,7 +43,7 @@ export function ReviewHistoryModal({
   const [collectionReviews, setCollectionReviews] = useState<CollectionReviewRecord[]>([]);
   const [collectionDecks, setCollectionDecks] = useState<{ id: string; name: string }[]>([]);
 
-  const fetchReviews = (nodeId: string, initial: boolean) => {
+  const fetchReviews = useCallback((nodeId: string, initial: boolean) => {
     if (initial) { setLoading(true); setDeckReviews([]); setCollectionReviews([]); setCollectionDecks([]); }
     else setRefreshing(true);
 
@@ -57,12 +57,12 @@ export function ReviewHistoryModal({
         setDeckReviews(result.reviews);
       }).catch(() => { }).finally(() => { setLoading(false); setRefreshing(false); });
     }
-  };
+  }, [isCollection]);
 
   useEffect(() => {
     if (!visible || !node) return;
     fetchReviews(node.id, true);
-  }, [visible, node, isCollection]);
+  }, [visible, node, fetchReviews]);
 
   const reloadReviews = () => { if (node) fetchReviews(node.id, false); };
 

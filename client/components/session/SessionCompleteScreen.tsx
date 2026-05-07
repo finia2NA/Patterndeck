@@ -106,7 +106,7 @@ export function SessionCompleteScreen({
       }
     }
     await onDone();
-  }, [doneDisabled, isQuickStudy, deckGroupEntries, deckReviewDrafts, onDone, studyMode, studySessionId]);
+  }, [doneDisabled, isQuickStudy, deckGroupEntries, deckReviewDrafts, onDone, studyMode, studySessionId, t]);
 
   const totalCards = completedCards.length;
   const firstTryCorrect = completedCards.filter(a => a.answers.length === 1).length;

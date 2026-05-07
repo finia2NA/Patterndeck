@@ -42,7 +42,6 @@ export function SidePanel({
   explanation: string;
   wasTruncated: boolean;
 }) {
-  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const c = useColors();
   const [width, setWidth] = useState(320);
