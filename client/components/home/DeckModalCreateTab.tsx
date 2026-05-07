@@ -6,6 +6,7 @@ import { SharedCreationNameField, SharedCreationOptionsSection } from './DeckMod
 import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
 import { usePageSheetScrolling } from '@/components/PageSheetScrollContext';
 import { AnimatedCollapsible } from '@/components/AnimatedCollapsible';
+import { useI18n } from '@/lib/i18n';
 
 interface DeckModalCreateTabProps {
   isCollection: boolean;
@@ -49,6 +50,7 @@ export function DeckModalCreateTab({
   enabledLanguages,
 }: DeckModalCreateTabProps) {
   const colors = useColors();
+  const { t } = useI18n();
   const isScrollingRef = usePageSheetScrolling();
   const topicRef = useRef<TextInput>(null);
   const clarificationRef = useRef<TextInput>(null);
@@ -64,11 +66,11 @@ export function DeckModalCreateTab({
   return (
     <>
       <SharedCreationNameField
-        label={isCollection ? 'Collection Name' : 'Deck Name'}
+        label={isCollection ? t('deck.collectionName') : t('deck.deckName')}
         description={isCollection
-          ? 'Rename this collection.'
-          : 'Use :: to nest in collections, e.g. "Japanese::N5::Te-form"'}
-        placeholder={isCollection ? 'Collection name' : 'Japanese::N5::Te-form'}
+          ? t('deck.renameCollection')
+          : t('deck.pathDescription')}
+        placeholder={isCollection ? t('deck.collectionPlaceholder') : t('deck.pathPlaceholder')}
         value={name}
         onChangeText={onNameChange}
         autoFocus
@@ -76,14 +78,14 @@ export function DeckModalCreateTab({
 
       {!isCollection && (
         <>
-          <Text className="text-foreground/80 text-sm font-medium mb-2">Topic</Text>
+          <Text className="text-foreground/80 text-sm font-medium mb-2">{t('deck.topic')}</Text>
           <Text className="text-foreground-secondary text-xs mb-2">
-            Name the grammar topic to study.
+            {t('deck.topicDescription')}
           </Text>
           <TextInput
             ref={topicRef}
             className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-base mb-6"
-            placeholder='e.g. "Japanese て-form conjugation"'
+            placeholder={t('deck.topicPlaceholder')}
             placeholderTextColor={colors.foreground_muted}
             value={topic}
             onChangeText={onTopicChange}
@@ -92,14 +94,14 @@ export function DeckModalCreateTab({
             onFocus={() => handleScrollAwareFocus(topicRef)}
           />
 
-          <Text className="text-foreground/80 text-sm font-medium mb-2">Clarification</Text>
+          <Text className="text-foreground/80 text-sm font-medium mb-2">{t('deck.clarification')}</Text>
           <Text className="text-foreground-secondary text-xs mb-2">
-            Add extra guidance for explanation generation.
+            {t('deck.clarificationDescription')}
           </Text>
           <TextInput
             ref={clarificationRef}
             className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm mb-6"
-            placeholder="What should the explanation include or keep in mind?"
+            placeholder={t('deck.clarificationPlaceholder')}
             placeholderTextColor={colors.foreground_muted}
             value={clarification}
             onChangeText={onClarificationChange}
@@ -116,9 +118,9 @@ export function DeckModalCreateTab({
                 activeOpacity={0.85}
               >
                 <View className="flex-1 pr-3">
-                  <Text className="text-foreground/80 text-sm font-medium">AI-generated Explanation</Text>
+                  <Text className="text-foreground/80 text-sm font-medium">{t('deck.generatedExplanation')}</Text>
                   <Text className="text-foreground-secondary text-xs mt-1">
-                    Markdown saved with this deck.
+                    {t('deck.generatedExplanationDescription')}
                   </Text>
                 </View>
                 <Text className="text-foreground-secondary text-sm">{explanationExpanded ? '▼' : '▶'}</Text>
@@ -128,7 +130,7 @@ export function DeckModalCreateTab({
                   <TextInput
                     ref={explanationRef}
                     className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm"
-                    placeholder="Generated explanation"
+                    placeholder={t('deck.generatedExplanationPlaceholder')}
                     placeholderTextColor={colors.foreground_muted}
                     value={explanation}
                     onChangeText={onExplanationChange}
@@ -158,14 +160,14 @@ export function DeckModalCreateTab({
               className="flex-1 py-3.5 rounded-xl border-secondary items-center bg-secondary"
               onPress={onExport}
             >
-              <Text className="text-secondary-foreground font-semibold">Export as CSV</Text>
+              <Text className="text-secondary-foreground font-semibold">{t('deck.exportCsv')}</Text>
             </TouchableOpacity>
           )}
           {onDelete && (
             <View className="flex-1">
               <NeedsConfirmationButton
-                label={`Delete ${isCollection ? 'Collection' : 'Deck'}`}
-                confirmLabel="Tap again to delete"
+                label={isCollection ? t('deck.deleteCollection') : t('deck.deleteDeck')}
+                confirmLabel={t('deck.tapAgainDelete')}
                 onConfirm={onDelete}
                 destructive
               />

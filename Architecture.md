@@ -23,7 +23,8 @@ Helpful reference docs:
 2. All AI requests go through the server rather than calling Anthropic directly from the app.
 3. Saved decks are stored as nodes in a hierarchical collection tree, with review history and due dates persisted in the database.
 4. Long-form explanation generation is queued in the background for saved decks so creation can return quickly.
-5. Study activity, AI usage, and failures are instrumented with PostHog on both the client and server.
+5. UI language is treated separately from study language, so users can run the app in one language while practising another.
+6. Study activity, AI usage, and failures are instrumented with PostHog on both the client and server.
 
 ## Core Product Systems
 
@@ -32,7 +33,8 @@ Helpful reference docs:
 - Expo Router app with screens for onboarding, home, session, and password reset.
 - Deck tree UI for nested collections and deck management.
 - Study session UI with streamed explanations, answer judging, chat, word hints, and completion flow.
-- Settings for card ordering, feedback style, default card counts, due-time control, notifications, API-key preference, and enabled languages.
+- Settings for UI language, card ordering, feedback style, default card counts, due-time control, notifications, API-key preference, and enabled study languages.
+- Lightweight i18n in `client/lib/i18n.ts`: device/browser locale detection before auth, persisted `ui_language` after settings hydration, English fallback strings, and English/German dictionaries.
 - PostHog route/screen tracking plus app-level error boundary integration.
 
 ### Server
@@ -42,12 +44,15 @@ Helpful reference docs:
 - AES-256-GCM encryption for stored user API keys.
 - Background explanation queue for deck generation work.
 - Central API-key usage controls with per-user and global monthly limits.
+- Auth endpoints accept an optional initial `uiLanguage` and store it as a generic user setting for newly created users.
 
 ### AI Flow
 
 - Anthropic Sonnet 4.6 powers streamed grammar explanations, rejection explanations, and in-session chat.
 - Anthropic Haiku 4.5 powers flashcard generation and answer judging.
 - Streaming responses are delivered over SSE to the client.
+- AI requests include a UI response language. Prompt builders keep three roles distinct: `studyLanguage` for the grammar being taught, `responseLanguage` for explanations and feedback, and `translateFrom` for localized source sentences.
+- Card generation asks the model for `translateFrom` and `targetSentence`; the server maps them back to the current legacy client card shape (`english` and `targetLanguage`) until a data-shape migration is worth doing.
 - Every server-side AI request records token usage, estimated cost, latency, and success/failure metadata.
 
 ## Data Model Summary
@@ -58,6 +63,8 @@ Helpful reference docs:
 - `DeckReview`: post-session review record storing AI rating, user rating, recap, and applied interval.
 - `PushDevice` and `NotificationSchedule`: mobile reminder delivery and per-user reminder timing.
 - `UsageLedger` and `MonthlyUsageSummary`: central-key spend tracking and budget enforcement.
+
+User settings are persisted as generic key/value rows. `ui_language` currently supports `en` and `de`; `enabled_languages` controls which study languages appear in deck and quick-study pickers.
 
 For the full schema, see [server/STRUCTURE.md](server/STRUCTURE.md).
 

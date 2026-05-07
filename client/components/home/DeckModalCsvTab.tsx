@@ -5,6 +5,7 @@ import { AnimatedCollapsible } from '@/components/AnimatedCollapsible';
 import { SharedCreationNameField, SharedCreationOptionsSection } from './DeckModalSharedCreationFields';
 import { CsvFileDropZone } from './CsvFileDropZone';
 import type { CsvImportStatus } from './DeckModal';
+import { useI18n } from '@/lib/i18n';
 
 interface DeckModalCsvTabProps {
   collectionPath: string;
@@ -31,6 +32,7 @@ export function DeckModalCsvTab({
 }: DeckModalCsvTabProps) {
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const { t } = useI18n();
 
   function handleFileSelected(name: string, content: string) {
     setSelectedFileName(name);
@@ -40,8 +42,8 @@ export function DeckModalCsvTab({
   return (
     <View>
       <SharedCreationNameField
-        label="Collection Name"
-        description='Use :: to nest in collections, e.g. "Japanese::N5". Imported rows become subdecks in this collection.'
+        label={t('deck.collectionName')}
+        description={t('deck.csvCollectionDescription')}
         placeholder="Japanese::N5"
         value={collectionPath}
         onChangeText={onCollectionPathChange}
@@ -54,14 +56,14 @@ export function DeckModalCsvTab({
           onPress={() => setDetailsExpanded(v => !v)}
           activeOpacity={0.85}
         >
-          <Text className="text-foreground text-base font-semibold">How this works</Text>
+          <Text className="text-foreground text-base font-semibold">{t('deck.howThisWorks')}</Text>
           <Text className="text-foreground-secondary text-sm">{detailsExpanded ? '▼' : '▶'}</Text>
         </TouchableOpacity>
         <AnimatedCollapsible expanded={detailsExpanded} keepMounted>
           <View className="px-4 pb-4">
-          <Text className="text-foreground/80 text-sm font-medium mb-2">File Format</Text>
+          <Text className="text-foreground/80 text-sm font-medium mb-2">{t('deck.fileFormat')}</Text>
           <Text className="text-foreground-secondary text-sm leading-5 mb-2">
-            Tab-separated (.tsv / .csv). Commas in text are fine — only tabs separate columns.
+            {t('deck.fileFormatDescription')}
           </Text>
           <View className="bg-surface border border-border rounded-xl px-4 py-3 mb-3">
             <Text className="text-foreground text-sm font-mono">DeckName&#9;Topic&#9;Clarification&#9;Explanation</Text>
@@ -76,7 +78,7 @@ export function DeckModalCsvTab({
             • If <Text className="text-foreground font-mono">DeckName</Text> is blank, <Text className="text-foreground font-mono">Topic</Text> is used as the deck name.
           </Text>
 
-          <Text className="text-foreground/80 text-sm font-medium mb-2">Deck Generation</Text>
+          <Text className="text-foreground/80 text-sm font-medium mb-2">{t('deck.deckGeneration')}</Text>
           <Text className="text-foreground-secondary text-sm leading-5 mb-1">
             • Each row creates one subdeck inside the collection.
           </Text>
@@ -93,9 +95,9 @@ export function DeckModalCsvTab({
         </AnimatedCollapsible>
       </View>
 
-      <Text className="text-foreground/80 text-sm font-medium mb-2">CSV File</Text>
+      <Text className="text-foreground/80 text-sm font-medium mb-2">{t('deck.csvFile')}</Text>
       <Text className="text-foreground-secondary text-sm leading-5 mb-3">
-        Drag and drop a `.csv` file here, or click/tap to browse. Max 5,000 rows.
+        {t('deck.csvFileDescription')}
       </Text>
       <CsvFileDropZone fileName={selectedFileName} onFileSelected={handleFileSelected} />
 
@@ -115,12 +117,13 @@ export function DeckModalCsvTab({
 }
 
 function ImportStatusDisplay({ status }: { status: CsvImportStatus }) {
+  const { t } = useI18n();
   if (status.state === 'idle') return null;
 
   if (status.state === 'importing') {
     return (
       <View className="mt-4 p-4 rounded-xl bg-primary/10 border border-primary/30">
-        <Text className="text-foreground text-sm font-semibold">Importing…</Text>
+        <Text className="text-foreground text-sm font-semibold">{t('deck.importing')}</Text>
       </View>
     );
   }
@@ -128,7 +131,7 @@ function ImportStatusDisplay({ status }: { status: CsvImportStatus }) {
   if (status.state === 'error') {
     return (
       <View className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
-        <Text className="text-red-400 text-sm font-semibold mb-1">Import failed</Text>
+        <Text className="text-red-400 text-sm font-semibold mb-1">{t('deck.importFailed')}</Text>
         <Text className="text-foreground-secondary text-xs">{status.message}</Text>
       </View>
     );
@@ -142,19 +145,19 @@ function ImportStatusDisplay({ status }: { status: CsvImportStatus }) {
     <View className={`mt-4 p-4 rounded-xl ${hasFailures ? 'bg-red-500/10 border border-red-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
       {hasSuccesses && (
         <Text className="text-foreground text-sm font-semibold mb-1">
-          Created {result.createdCount} deck{result.createdCount === 1 ? '' : 's'}
+          {t('deck.createdDecks', { count: result.createdCount, deckWord: result.createdCount === 1 ? 'deck' : 'decks' })}
         </Text>
       )}
       {hasFailures && (
         <>
           <Text className="text-red-400 text-sm font-semibold mb-2">
-            {result.failedCount} row{result.failedCount === 1 ? '' : 's'} failed
+            {t('deck.failedRows', { count: result.failedCount, rowWord: result.failedCount === 1 ? 'row' : 'rows' })}
           </Text>
           <ScrollView style={{ maxHeight: 160 }}>
             {result.failures.map((f, i) => (
               <View key={i} className="mb-2 pl-3 border-l-2 border-red-500/40">
                 <Text className="text-foreground-secondary text-xs">
-                  <Text className="text-foreground font-semibold">Line {f.line}</Text>
+                  <Text className="text-foreground font-semibold">{t('deck.line', { line: f.line })}</Text>
                   {'  '}
                   {f.error}
                 </Text>

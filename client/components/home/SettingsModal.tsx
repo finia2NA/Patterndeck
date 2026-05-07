@@ -9,18 +9,18 @@ import {
   Pressable,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { useColors } from '@/constants/theme';
-import pluralize from 'pluralize'
-import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
+import pluralize from 'pluralize';
 import { useRouter } from 'expo-router';
+import { CARD_ORDER_OPTIONS, JUDGE_WITH_EXPLANATION_OPTIONS, FEEDBACK_BREVITY_OPTIONS, KEY_PREFERENCE_OPTIONS, MAX_DECKS_OPTIONS, NEW_DECKS_OPTIONS, UNLIMITED_NEW_DECKS } from '@patterndeck/shared';
+import { useColors } from '@/constants/theme';
+import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
 import { clearAuthToken, clearUserEmail, clearUserId, getUserEmail, getUserId } from '@/lib/storage';
 import { deleteApiKey, getUsageStatus, hydrateSettings, parseEnabledLanguages, saveSettings } from '@/lib/api';
 import type { UsageStatus } from '@/lib/api';
 import { getSettingsSnapshot, resetLocalSettings } from '@/hooks/state/persistent/settingsStore';
 import { PillDropdown } from '@/components/PillDropdown';
-import { CARD_COUNTS, DEFAULT_LANGUAGES, formatCardCount } from '@/constants/session';
-import { CARD_ORDER_OPTIONS, JUDGE_WITH_EXPLANATION_OPTIONS, FEEDBACK_BREVITY_OPTIONS, KEY_PREFERENCE_OPTIONS, MAX_DECKS_OPTIONS, NEW_DECKS_OPTIONS, UNLIMITED_NEW_DECKS } from '@patterndeck/shared';
-import type { CardCount } from '@/constants/session';
+import { CARD_COUNTS, DEFAULT_LANGUAGES, formatCardCount, UI_LOCALES } from '@/constants/session';
+import type { CardCount, UiLocale } from '@/constants/session';
 import { LanguagePicker } from '@/components/home/LanguagePicker';
 import { PageSheetModal } from '@/components/PageSheetModal';
 import { platformAlert } from '@/lib/platformAlert';
@@ -35,8 +35,10 @@ import { UsageBar } from './UsageBar';
 import { AddApiKeyForm } from './AddApiKeyForm';
 import { formatCost } from '@/lib/format';
 import { analytics } from '@/lib/analytics';
+import { resolveUiLocale, useI18n } from '@/lib/i18n';
 
 type CardOrder = 'sequential' | 'shuffled';
+type KeyPreference = 'central' | 'own';
 
 interface SettingsModalProps {
   visible: boolean;
@@ -44,14 +46,14 @@ interface SettingsModalProps {
 }
 
 const ConfirmButton = NeedsConfirmationButton;
-
-type KeyPreference = 'central' | 'own';
 const DEFAULT_CARD_COUNT_OPTIONS = CARD_COUNTS.filter((count) => count !== 0);
 const supportsPushNotifications = Platform.OS === 'ios' || Platform.OS === 'android';
 
 export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   const router = useRouter();
   const colors = useColors();
+  const { t, localeLabels } = useI18n();
+  const [uiLanguage, setUiLanguage] = useState<UiLocale>('en');
   const [cardOrder, setCardOrder] = useState<CardOrder>('shuffled');
   const [judgeWithExplanation, setJudgeWithExplanation] = useState<'on' | 'off'>('on');
   const [feedbackBrevity, setFeedbackBrevity] = useState<'brief' | 'normal'>('normal');
@@ -79,15 +81,10 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       if (!mounted) return;
       const settings = getSettingsSnapshot();
 
-      if (settings.card_order === 'sequential' || settings.card_order === 'shuffled') {
-        setCardOrder(settings.card_order);
-      }
-      if (settings.judge_with_explanation === 'on' || settings.judge_with_explanation === 'off') {
-        setJudgeWithExplanation(settings.judge_with_explanation);
-      }
-      if (settings.feedback_brevity === 'brief' || settings.feedback_brevity === 'normal') {
-        setFeedbackBrevity(settings.feedback_brevity);
-      }
+      setUiLanguage(resolveUiLocale(settings.ui_language));
+      if (settings.card_order === 'sequential' || settings.card_order === 'shuffled') setCardOrder(settings.card_order);
+      if (settings.judge_with_explanation === 'on' || settings.judge_with_explanation === 'off') setJudgeWithExplanation(settings.judge_with_explanation);
+      if (settings.feedback_brevity === 'brief' || settings.feedback_brevity === 'normal') setFeedbackBrevity(settings.feedback_brevity);
 
       const n = settings.default_card_count ? parseInt(settings.default_card_count, 10) : 10;
       setDefaultCardCount(CARD_COUNTS.includes(n as CardCount) && n !== 0 ? n as CardCount : 10);
@@ -101,12 +98,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       setEnabledLanguages(parseEnabledLanguages(settings.enabled_languages ?? null, DEFAULT_LANGUAGES));
     });
 
-    getUsageStatus().then(status => {
-      if (mounted) setUsageStatus(status);
-    }).catch(() => { });
-    getUserEmail().then(email => {
-      if (mounted) setUserEmail(email);
-    }).catch(() => { });
+    getUsageStatus().then(status => { if (mounted) setUsageStatus(status); }).catch(() => { });
+    getUserEmail().then(email => { if (mounted) setUserEmail(email); }).catch(() => { });
     setShowAddKey(false);
     setSaving(false);
 
@@ -131,7 +124,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     } catch (e) {
       setNotificationsEnabled('off');
       const message = e instanceof Error ? e.message : 'Unable to enable notifications.';
-      platformAlert('Notifications unavailable', message);
+      platformAlert(t('settings.notificationsUnavailable'), message);
     } finally {
       setNotificationSetupBusy(false);
     }
@@ -140,6 +133,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   async function handleDone() {
     const nextSettings = {
       ...getSettingsSnapshot(),
+      ui_language: uiLanguage,
       card_order: cardOrder,
       judge_with_explanation: judgeWithExplanation,
       feedback_brevity: feedbackBrevity,
@@ -161,8 +155,8 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       }
       onClose();
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to save settings.';
-      platformAlert('Save failed', message);
+      const message = e instanceof Error ? e.message : t('settings.saveFailed');
+      platformAlert(t('settings.saveFailed'), message);
     } finally {
       setSaving(false);
     }
@@ -183,9 +177,7 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
     try {
       await deleteApiKey();
     } catch { /* ignore */ }
-    if (usageStatus) {
-      setUsageStatus({ ...usageStatus, hasOwnKey: false });
-    }
+    if (usageStatus) setUsageStatus({ ...usageStatus, hasOwnKey: false });
     if (!usageStatus?.centralKeyAvailable) {
       onClose();
       router.replace('/onboarding');
@@ -200,9 +192,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
       const userId = await getUserId();
       if (userId) {
         await Clipboard.setStringAsync(userId);
-        Alert.alert('User ID copied', userId);
+        Alert.alert(t('settings.userIdCopied'), userId);
       } else {
-        Alert.alert('No user ID found');
+        Alert.alert(t('settings.noUserId'));
       }
       return;
     }
@@ -217,96 +209,44 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
   return (
     <PageSheetModal
       visible={visible}
-      title="Settings"
-      cancelText="Cancel"
+      title={t('settings.title')}
+      cancelText={t('common.cancel')}
       onCancel={onClose}
-      confirmText={saving ? 'Saving…' : 'Done'}
+      confirmText={saving ? t('common.saving') : t('common.done')}
       onConfirm={handleDone}
       confirmDisabled={saving}
       confirmCloses={false}
     >
-      {/* Study Settings */}
-      <SectionCard title="Study Settings">
-        <SettingsRow
-          label="Collection Card Order"
-          description="Order of cards when studying a collection"
-        >
-          <PillDropdown
-            value={cardOrder}
-            options={CARD_ORDER_OPTIONS}
-            onChange={setCardOrder}
-            formatLabel={(v: CardOrder) => v === 'shuffled' ? 'Shuffled' : 'Sequential'}
-          />
+      <SectionCard title={t('settings.studySettings')}>
+        <SettingsRow label={t('settings.uiLanguage')} description={t('settings.uiLanguageDescription')}>
+          <PillDropdown value={uiLanguage} options={UI_LOCALES} onChange={setUiLanguage} formatLabel={(v: UiLocale) => localeLabels[v]} />
         </SettingsRow>
-        <SettingsRow
-          label="Context-Aware Judging"
-          description="Pass the grammar explanation to the judging AI for more topic-relevant feedback. Uses API limits faster."
-        >
-          <PillDropdown
-            value={judgeWithExplanation}
-            options={JUDGE_WITH_EXPLANATION_OPTIONS}
-            onChange={setJudgeWithExplanation}
-            formatLabel={(v: 'on' | 'off') => v === 'on' ? 'On' : 'Off'}
-          />
+        <SettingsRow label={t('settings.collectionCardOrder')} description={t('settings.collectionCardOrderDescription')}>
+          <PillDropdown value={cardOrder} options={CARD_ORDER_OPTIONS} onChange={setCardOrder} formatLabel={(v: CardOrder) => v === 'shuffled' ? t('settings.shuffled') : t('settings.sequential')} />
         </SettingsRow>
-        <SettingsRow
-          label="Feedback Brevity"
-          description="Brief shows a few-word hint. Normal gives a fuller explanation."
-        >
-          <PillDropdown
-            value={feedbackBrevity}
-            options={FEEDBACK_BREVITY_OPTIONS}
-            onChange={setFeedbackBrevity}
-            formatLabel={(v: 'brief' | 'normal') => v === 'brief' ? 'Brief' : 'Normal'}
-          />
+        <SettingsRow label={t('settings.contextAwareJudging')} description={t('settings.contextAwareJudgingDescription')}>
+          <PillDropdown value={judgeWithExplanation} options={JUDGE_WITH_EXPLANATION_OPTIONS} onChange={setJudgeWithExplanation} formatLabel={(v: 'on' | 'off') => v === 'on' ? t('settings.on') : t('settings.off')} />
         </SettingsRow>
-        <SettingsRow
-          label="Default Cards per Topic"
-          description="How many cards to generate per deck by default"
-        >
-          <PillDropdown
-            value={defaultCardCount}
-            options={DEFAULT_CARD_COUNT_OPTIONS}
-            onChange={setDefaultCardCount}
-            formatLabel={formatCardCount}
-          />
+        <SettingsRow label={t('settings.feedbackBrevity')} description={t('settings.feedbackBrevityDescription')}>
+          <PillDropdown value={feedbackBrevity} options={FEEDBACK_BREVITY_OPTIONS} onChange={setFeedbackBrevity} formatLabel={(v: 'brief' | 'normal') => v === 'brief' ? t('settings.brief') : t('settings.normal')} />
         </SettingsRow>
-        <SettingsRow
-          label="Max Decks per Session"
-          description="Limit how many decks are studied at once from a collection"
-        >
-          <PillDropdown
-            value={maxDecksPerSession}
-            options={MAX_DECKS_OPTIONS}
-            onChange={setMaxDecksPerSession}
-            formatLabel={(v: number) => pluralize('deck', v, true)}
-          />
+        <SettingsRow label={t('settings.defaultCards')} description={t('settings.defaultCardsDescription')}>
+          <PillDropdown value={defaultCardCount} options={DEFAULT_CARD_COUNT_OPTIONS} onChange={setDefaultCardCount} formatLabel={formatCardCount} />
         </SettingsRow>
-        <SettingsRow
-          label="New Decks per Day"
-          description="How many never-studied decks to start each day"
-        >
-          <PillDropdown
-            value={newDecksPerDay}
-            options={NEW_DECKS_OPTIONS}
-            onChange={setNewDecksPerDay}
-            formatLabel={(v: number) => v >= UNLIMITED_NEW_DECKS ? '∞ decks' : pluralize('deck', v, true)}
-          />
+        <SettingsRow label={t('settings.maxDecks')} description={t('settings.maxDecksDescription')}>
+          <PillDropdown value={maxDecksPerSession} options={MAX_DECKS_OPTIONS} onChange={setMaxDecksPerSession} formatLabel={(v: number) => pluralize('deck', v, true)} />
         </SettingsRow>
-        <SettingsRow
-          label="Daily Due Release Time"
-          description="When decks become due each day"
-        >
+        <SettingsRow label={t('settings.newDecks')} description={t('settings.newDecksDescription')}>
+          <PillDropdown value={newDecksPerDay} options={NEW_DECKS_OPTIONS} onChange={setNewDecksPerDay} formatLabel={(v: number) => v >= UNLIMITED_NEW_DECKS ? '∞ decks' : pluralize('deck', v, true)} />
+        </SettingsRow>
+        <SettingsRow label={t('settings.dailyDueTime')} description={t('settings.dailyDueTimeDescription')}>
           <TimePicker value={dailyDueTime} onChange={(next: string) => setDailyDueTime(normalizeTime(next))} />
         </SettingsRow>
       </SectionCard>
 
       {supportsPushNotifications ? (
-        <SectionCard title="Notifications">
-          <SettingsRow
-            label="Due Deck Reminders"
-            description="Send a mobile reminder when decks are ready to review"
-          >
+        <SectionCard title={t('settings.notifications')}>
+          <SettingsRow label={t('settings.dueDeckReminders')} description={t('settings.dueDeckRemindersDescription')}>
             <Switch
               value={notificationsEnabled === 'on'}
               onValueChange={handleNotificationsToggle}
@@ -315,79 +255,48 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
               thumbColor={colors.surface}
             />
           </SettingsRow>
-          <SettingsRow
-            label="Reminder Time"
-            description="When to notify you, separate from the due release time"
-          >
-            <TimePicker
-              value={notificationTime}
-              onChange={(next: string) => setNotificationTime(normalizeTime(next))}
-              disabled={notificationsEnabled !== 'on'}
-            />
+          <SettingsRow label={t('settings.reminderTime')} description={t('settings.reminderTimeDescription')}>
+            <TimePicker value={notificationTime} onChange={(next: string) => setNotificationTime(normalizeTime(next))} disabled={notificationsEnabled !== 'on'} />
           </SettingsRow>
         </SectionCard>
       ) : null}
 
-      {/* Languages */}
       <View className="mb-5">
-        <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-2 px-1">
-          Languages
-        </Text>
+        <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-2 px-1">{t('settings.languages')}</Text>
         <View className="h-px bg-border mb-4" />
         <View className="px-1">
           <TouchTarget
             onPress={() => setLanguagesExpanded(e => !e)}
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 0 }}
           >
-            <Text className="text-foreground text-sm font-medium">
-              {languagesExpanded ? 'Hide Languages' : 'Show languages'}
-            </Text>
+            <Text className="text-foreground text-sm font-medium">{languagesExpanded ? t('settings.hideLanguages') : t('settings.showLanguages')}</Text>
             <Text className="text-foreground-secondary text-sm">{languagesExpanded ? '▼' : '▶'}</Text>
           </TouchTarget>
           <AnimatedCollapsible expanded={languagesExpanded} keepMounted={false}>
             <View className="pb-2">
-              <Text className="text-foreground-secondary text-xs mb-4">
-                Choose which languages appear in the language picker when creating decks.
-              </Text>
+              <Text className="text-foreground-secondary text-xs mb-4">{t('settings.languagesDescription')}</Text>
               <LanguagePicker enabled={enabledLanguages} onChange={setEnabledLanguages} />
             </View>
           </AnimatedCollapsible>
         </View>
       </View>
 
-      {/* API & Usage */}
       {usageStatus && (
-        <SectionCard title="API & Usage">
+        <SectionCard title={t('settings.apiUsage')}>
           {usageStatus.centralKeyAvailable && (
-            <Text className="text-foreground-secondary text-xs leading-5 mb-4">
-              Some usage is included with your account using the server&apos;s API key.
-              You can also connect your own Anthropic key if you&apos;d like unlimited usage.
-            </Text>
+            <Text className="text-foreground-secondary text-xs leading-5 mb-4">{t('settings.includedUsage')}</Text>
           )}
           {usageStatus.centralKeyAvailable && (
-            <SettingsRow
-              label="Key Source"
-              description="Which API key to use for AI requests"
-            >
-              <PillDropdown
-                value={usageStatus.preference}
-                options={KEY_PREFERENCE_OPTIONS}
-                onChange={handleChangePreference}
-                formatLabel={(v: KeyPreference) => v === 'central' ? 'Server Key' : 'My Own Key'}
-              />
+            <SettingsRow label={t('settings.keySource')} description={t('settings.keySourceDescription')}>
+              <PillDropdown value={usageStatus.preference} options={KEY_PREFERENCE_OPTIONS} onChange={handleChangePreference} formatLabel={(v: KeyPreference) => v === 'central' ? t('settings.serverKey') : t('settings.myOwnKey')} />
             </SettingsRow>
           )}
           {usageStatus.centralKeyAvailable && usageStatus.preference === 'central' && (
             <View className="mb-4">
-              <Text className="text-foreground/60 text-xs font-medium mb-2 uppercase tracking-wide">This Month</Text>
-              <UsageBar
-                used={usageStatus.usage.central}
-                limit={usageStatus.userLimit}
-              />
+              <Text className="text-foreground/60 text-xs font-medium mb-2 uppercase tracking-wide">{t('settings.thisMonth')}</Text>
+              <UsageBar used={usageStatus.usage.central} limit={usageStatus.userLimit} />
               {usageStatus.globalLimitReached && (
-                <Text className="text-xs mt-1" style={{ color: colors.error }}>
-                  Global usage limit reached
-                </Text>
+                <Text className="text-xs mt-1" style={{ color: colors.error }}>{t('settings.globalLimitReached')}</Text>
               )}
             </View>
           )}
@@ -395,29 +304,17 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
             <View className="mb-4">
               {usageStatus.hasOwnKey && (
                 <View className="mb-3">
-                  <Text className="text-foreground/60 text-xs font-medium mb-2 uppercase tracking-wide">This Month</Text>
-                  <Text className="text-foreground-secondary text-xs">
-                    Used: {formatCost(usageStatus.usage.own)}
-                  </Text>
+                  <Text className="text-foreground/60 text-xs font-medium mb-2 uppercase tracking-wide">{t('settings.thisMonth')}</Text>
+                  <Text className="text-foreground-secondary text-xs">{t('settings.used', { amount: formatCost(usageStatus.usage.own) })}</Text>
                 </View>
               )}
               {usageStatus.hasOwnKey ? (
-                <ConfirmButton
-                  label="Delete Personal API Key"
-                  confirmLabel="Tap again to delete key"
-                  onConfirm={handleDeleteApiKey}
-                  destructive
-                />
+                <ConfirmButton label={t('settings.deletePersonalKey')} confirmLabel={t('settings.deletePersonalKeyConfirm')} onConfirm={handleDeleteApiKey} destructive />
               ) : showAddKey ? (
                 <AddApiKeyForm onAdded={handleKeyAdded} />
               ) : (
-                <TouchableOpacity
-                  className="py-3 rounded-xl border items-center"
-                  style={{ borderColor: colors.border }}
-                  onPress={() => setShowAddKey(true)}
-                  activeOpacity={0.8}
-                >
-                  <Text className="text-foreground font-semibold">Add Personal API Key</Text>
+                <TouchableOpacity className="py-3 rounded-xl border items-center" style={{ borderColor: colors.border }} onPress={() => setShowAddKey(true)} activeOpacity={0.8}>
+                  <Text className="text-foreground font-semibold">{t('settings.addPersonalKey')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -425,28 +322,20 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
         </SectionCard>
       )}
 
-      {/* Account */}
       <View className="mb-5">
         <Pressable onPress={handleAccountTitleTap} hitSlop={8}>
-          <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-2 px-1">
-            Account
-          </Text>
+          <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-2 px-1">{t('settings.account')}</Text>
         </Pressable>
         <View className="h-px bg-border mb-4" />
         <View className="px-1">
           {userEmail && (
             <View className="mb-4">
-              <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-1">Logged in as</Text>
+              <Text className="text-foreground/50 text-xs font-semibold uppercase tracking-widest mb-1">{t('settings.loggedInAs')}</Text>
               <Text className="text-foreground text-sm">{userEmail}</Text>
             </View>
           )}
           <View className="mb-4">
-            <ConfirmButton
-              label="Log Out"
-              confirmLabel="Tap again to log out"
-              onConfirm={handleLogout}
-              destructive
-            />
+            <ConfirmButton label={t('settings.logout')} confirmLabel={t('settings.logoutConfirm')} onConfirm={handleLogout} destructive />
           </View>
         </View>
       </View>

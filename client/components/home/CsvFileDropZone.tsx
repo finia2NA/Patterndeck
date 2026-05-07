@@ -1,6 +1,7 @@
 import { TouchableOpacity, View, Text } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
+import { useI18n } from '@/lib/i18n';
 
 interface CsvFileDropZoneProps {
   fileName: string | null;
@@ -8,6 +9,7 @@ interface CsvFileDropZoneProps {
 }
 
 export function CsvFileDropZone({ fileName, onFileSelected }: CsvFileDropZoneProps) {
+  const { t } = useI18n();
   async function handlePickFile() {
     const result = await DocumentPicker.getDocumentAsync({
       type: ['text/csv', 'text/tab-separated-values', 'text/comma-separated-values', 'application/vnd.ms-excel'],
@@ -28,13 +30,13 @@ export function CsvFileDropZone({ fileName, onFileSelected }: CsvFileDropZonePro
       onPress={handlePickFile}
       activeOpacity={0.9}
     >
-      <Text className="text-foreground-secondary text-sm font-semibold mb-1">Drop CSV Here</Text>
+      <Text className="text-foreground-secondary text-sm font-semibold mb-1">{t('csv.dropHere')}</Text>
       <Text className="text-foreground-muted text-xs text-center">
         Tap to browse files. Drag and drop is supported on web.
       </Text>
       {fileName ? (
         <View className="mt-3 px-3 py-1.5 rounded-md bg-background-muted border border-border">
-          <Text className="text-foreground text-xs">Selected: {fileName}</Text>
+          <Text className="text-foreground text-xs">{t('csv.selected', { fileName })}</Text>
         </View>
       ) : null}
     </TouchableOpacity>

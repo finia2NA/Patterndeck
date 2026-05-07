@@ -431,13 +431,22 @@ export async function streamExplanation(req: Request, res: Response, userId: str
 
 // ─── Public AI endpoints ─────────────────────────────────────────────────────
 
-export async function generateCards(userId: string, topic: string, language: string, count: number, explanation: string, analyticsContext?: AiAnalyticsContext) {
+type GeneratedCard = {
+  translateFrom?: string;
+  targetSentence?: string;
+  english?: string;
+  targetLanguage?: string;
+  sentenceContext?: string;
+  hint?: string;
+};
+
+export async function generateCards(userId: string, topic: string, language: string, count: number, explanation: string, responseLanguage = 'English', analyticsContext?: AiAnalyticsContext) {
   const { apiKey, source } = await resolveApiKey(userId);
 
-  const { result, cost } = await callTool<{ cards: Omit<Card, 'id'>[] }>(
+  const { result, cost } = await callTool<{ cards: GeneratedCard[] }>(
     apiKey, HAIKU,
-    CARD_GEN_PROMPT(language, count),
-    JSON.stringify({ topic, count, explanation }),
+    CARD_GEN_PROMPT(language, count, responseLanguage),
+    JSON.stringify({ topic, studyLanguage: language, responseLanguage, count, explanation }),
     2000,
     {
       userId,
@@ -473,7 +482,13 @@ export async function generateCards(userId: string, topic: string, language: str
     },
   });
 
-  const cards: Card[] = result.cards.map((c, i) => ({ ...c, id: String(i) }));
+  const cards: Card[] = result.cards.map((c, i) => ({
+    id: String(i),
+    english: c.translateFrom ?? c.english ?? '',
+    targetLanguage: c.targetSentence ?? c.targetLanguage ?? '',
+    ...(c.sentenceContext ? { sentenceContext: c.sentenceContext } : {}),
+    ...(c.hint ? { hint: c.hint } : {}),
+  }));
   // Fisher-Yates shuffle
   for (let i = cards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -483,7 +498,7 @@ export async function generateCards(userId: string, topic: string, language: str
   return { cards, cost };
 }
 
-export async function judgeAnswer(userId: string, card: Card, userAnswer: string, language: string, explanation?: string, brevity: 'brief' | 'normal' = 'normal', analyticsContext?: AiAnalyticsContext) {
+export async function judgeAnswer(userId: string, card: Card, userAnswer: string, language: string, explanation?: string, brevity: 'brief' | 'normal' = 'normal', responseLanguage = 'English', analyticsContext?: AiAnalyticsContext) {
   const { apiKey, source } = await resolveApiKey(userId);
 
   const userPayload = {
@@ -497,7 +512,7 @@ export async function judgeAnswer(userId: string, card: Card, userAnswer: string
 
   const { result, cost } = await callTool<{ reason: string; correct: boolean }>(
     apiKey, HAIKU,
-    JUDGMENT_PROMPT(language, brevity),
+    JUDGMENT_PROMPT(language, brevity, responseLanguage),
     JSON.stringify(userPayload),
     brevity === 'brief' ? 60 : 120,
     {
@@ -514,7 +529,7 @@ export async function judgeAnswer(userId: string, card: Card, userAnswer: string
 }
 
 export async function reviewRejection(
-  userId: string, card: Card, userAnswer: string, language: string, explanation?: string, brevity: 'brief' | 'normal' = 'normal', analyticsContext?: AiAnalyticsContext,
+  userId: string, card: Card, userAnswer: string, language: string, explanation?: string, brevity: 'brief' | 'normal' = 'normal', responseLanguage = 'English', analyticsContext?: AiAnalyticsContext,
 ) {
   const { apiKey, source } = await resolveApiKey(userId);
 
@@ -529,7 +544,7 @@ export async function reviewRejection(
 
   const { result, cost } = await callTool<{ explanation: string; overrideToCorrect: boolean }>(
     apiKey, SONNET,
-    REJECTION_PROMPT(language, brevity),
+    REJECTION_PROMPT(language, brevity, responseLanguage),
     JSON.stringify(userPayload),
     brevity === 'brief' ? 200 : 400,
     {
@@ -591,6 +606,7 @@ export async function rateSession(
   topic: string,
   language: string,
   cards: CardAttemptData[],
+  responseLanguage = 'English',
   analyticsContext?: AiAnalyticsContext,
 ): Promise<{ stars: number; recap: string; cost: number }> {
   const { apiKey, source } = await resolveApiKey(userId);
@@ -603,7 +619,7 @@ export async function rateSession(
 
   const { result, cost } = await callTool<{ stars: number; recap: string }>(
     apiKey, HAIKU,
-    SESSION_RATING_PROMPT(language),
+    SESSION_RATING_PROMPT(language, responseLanguage),
     JSON.stringify({ topic, cards: normalizedCards }),
     200,
     {
@@ -627,6 +643,7 @@ export async function explainSentence(
   card: Card,
   language: string,
   explanation?: string,
+  responseLanguage = 'English',
   analyticsContext?: AiAnalyticsContext,
 ): Promise<{ explanation: string; cost: number }> {
   const { apiKey, source } = await resolveApiKey(userId);
@@ -641,7 +658,7 @@ export async function explainSentence(
 
   const { result, cost } = await callTool<{ explanation: string }>(
     apiKey, HAIKU,
-    SENTENCE_REVEAL_PROMPT(language),
+    SENTENCE_REVEAL_PROMPT(language, responseLanguage),
     JSON.stringify(userPayload),
     300,
     {
@@ -663,13 +680,14 @@ export async function generateWordHint(
   english: string,
   targetLanguage: string,
   language: string,
+  responseLanguage = 'English',
   analyticsContext?: AiAnalyticsContext,
 ): Promise<{ infinitive: string; with_annotation: string; word_type: string; cost: number }> {
   const { apiKey, source } = await resolveApiKey(userId);
 
   const { result, cost } = await callTool<{ infinitive: string; with_annotation: string; word_type: string }>(
     apiKey, HAIKU,
-    WORD_HINT_PROMPT(language),
+    WORD_HINT_PROMPT(language, responseLanguage),
     JSON.stringify({ english, targetLanguage, word }),
     150,
     {
@@ -686,7 +704,7 @@ export async function generateWordHint(
 
 export async function streamExplanationGeneric(
   req: Request, res: Response,
-  userId: string, topic: string, language: string, analyticsContext?: AiAnalyticsContext,
+  userId: string, topic: string, language: string, responseLanguage = 'English', analyticsContext?: AiAnalyticsContext,
 ) {
   const { apiKey, source } = await resolveApiKey(userId);
   const controller = new AbortController();
@@ -697,8 +715,8 @@ export async function streamExplanationGeneric(
   try {
     const { wasTruncated, cost } = await callTextStream(
       apiKey, SONNET,
-      EXPLANATION_PROMPT(language),
-      [{ role: 'user', content: JSON.stringify({ topic }) }],
+      EXPLANATION_PROMPT(language, responseLanguage),
+      [{ role: 'user', content: JSON.stringify({ topic, studyLanguage: language, responseLanguage }) }],
       4096,
       (chunk) => sendChunk(res, { type: 'text', text: chunk }),
       controller.signal,

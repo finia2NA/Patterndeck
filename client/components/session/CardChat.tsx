@@ -10,6 +10,7 @@ import {
 import { useColors } from '@/constants/theme';
 import type { ChatMessage } from '@/lib/types';
 import { GrammarMarkdown } from './GrammarMarkdown';
+import { useI18n } from '@/lib/i18n';
 
 interface CardChatProps {
   messages: ChatMessage[];
@@ -19,6 +20,7 @@ interface CardChatProps {
 
 export function CardChat({ messages, streaming, onSend }: CardChatProps) {
   const colors = useColors();
+  const { t } = useI18n();
   const [inputText, setInputText] = useState('');
   const inputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -69,7 +71,7 @@ export function CardChat({ messages, streaming, onSend }: CardChatProps) {
         <TextInput
           ref={inputRef}
           className="flex-1 bg-background-muted border border-border rounded-xl px-4 py-2.5 text-foreground placeholder:text-foreground-muted text-sm"
-          placeholder="Ask about this card…"
+          placeholder={t('session.askAboutCard')}
           placeholderTextColor={colors.foreground_muted}
           value={inputText}
           onChangeText={setInputText}

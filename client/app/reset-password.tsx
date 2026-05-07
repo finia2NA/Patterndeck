@@ -15,6 +15,7 @@ import { useColors } from '@/constants/theme';
 import { OnboardingBackground } from '@/components/OnboardingBackground';
 import { validateResetToken, resetPassword } from '@/lib/api';
 import { validatePassword } from '@patterndeck/shared';
+import { useI18n } from '@/lib/i18n';
 
 type PageState = 'loading' | 'invalid' | 'form' | 'success';
 
@@ -22,6 +23,7 @@ export default function ResetPassword() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { t } = useI18n();
   const confirmRef = useRef<TextInput>(null);
 
   const [state, setState] = useState<PageState>('loading');
@@ -44,14 +46,14 @@ export default function ResetPassword() {
     setError(null);
     const pwErr = validatePassword(password);
     if (pwErr) { setError(pwErr); return; }
-    if (password !== confirm) { setError('Passwords do not match.'); return; }
+    if (password !== confirm) { setError(t('reset.passwordMismatch')); return; }
 
     setSubmitting(true);
     try {
       await resetPassword(token!, password);
       setState('success');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.');
+      setError(e instanceof Error ? e.message : t('common.errorGeneric'));
     } finally {
       setSubmitting(false);
     }
@@ -77,32 +79,32 @@ export default function ResetPassword() {
         <View className="w-full max-w-md bg-surface rounded-3xl p-8 shadow-2xl">
           {state === 'loading' && (
             <>
-              <Text className="text-3xl font-bold text-foreground mb-4">Reset password</Text>
+              <Text className="text-3xl font-bold text-foreground mb-4">{t('onboarding.resetPassword')}</Text>
               <ActivityIndicator color={colors.primary} size="large" />
             </>
           )}
 
           {state === 'invalid' && (
             <>
-              <Text className="text-3xl font-bold text-foreground mb-3">Link expired</Text>
+              <Text className="text-3xl font-bold text-foreground mb-3">{t('reset.linkExpired')}</Text>
               <Text className="text-foreground-secondary text-sm leading-6">
-                This reset link is invalid or has expired. Please request a new one from the app.
+                {t('reset.linkExpiredBody')}
               </Text>
             </>
           )}
 
           {state === 'form' && (
             <>
-              <Text className="text-3xl font-bold text-foreground mb-2">Reset password</Text>
+              <Text className="text-3xl font-bold text-foreground mb-2">{t('onboarding.resetPassword')}</Text>
               <Text className="text-foreground-secondary text-sm leading-6 mb-6">
-                Enter your new password below.
+                {t('reset.newPasswordBody')}
               </Text>
 
-              <Text className="text-foreground/80 text-sm font-medium mb-2">New password</Text>
+              <Text className="text-foreground/80 text-sm font-medium mb-2">{t('reset.newPassword')}</Text>
               <View className="p-1 mb-3">
                 <TextInput
                   className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm"
-                  placeholder="At least 8 characters"
+                  placeholder={t('onboarding.passwordPlaceholder')}
                   placeholderTextColor={colors.foreground_muted}
                   value={password}
                   onChangeText={setPassword}
@@ -114,12 +116,12 @@ export default function ResetPassword() {
                 />
               </View>
 
-              <Text className="text-foreground/80 text-sm font-medium mb-2">Confirm password</Text>
+              <Text className="text-foreground/80 text-sm font-medium mb-2">{t('reset.confirmPassword')}</Text>
               <View className="p-1">
                 <TextInput
                   ref={confirmRef}
                   className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm"
-                  placeholder="Re-enter your password"
+                  placeholder={t('reset.confirmPlaceholder')}
                   placeholderTextColor={colors.foreground_muted}
                   value={confirm}
                   onChangeText={setConfirm}
@@ -132,7 +134,7 @@ export default function ResetPassword() {
               </View>
 
               <Text className="text-foreground-subtle text-xs mt-2 mb-4">
-                Must be at least 8 characters with at least one letter and one number.
+                {t('reset.requirements')}
               </Text>
 
               {error && <Text className="text-error text-xs mb-3">{error}</Text>}
@@ -145,7 +147,7 @@ export default function ResetPassword() {
                 {submitting ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text className="text-primary-foreground font-semibold">Reset Password</Text>
+                  <Text className="text-primary-foreground font-semibold">{t('reset.submit')}</Text>
                 )}
               </TouchableOpacity>
             </>
@@ -153,9 +155,9 @@ export default function ResetPassword() {
 
           {state === 'success' && (
             <>
-              <Text className="text-3xl font-bold text-primary mb-3">Password reset!</Text>
+              <Text className="text-3xl font-bold text-primary mb-3">{t('reset.successTitle')}</Text>
               <Text className="text-foreground-secondary text-sm leading-6">
-                Your password has been updated. Open the PatternDeck app to sign in with your new password.
+                {t('reset.successBody')}
               </Text>
             </>
           )}

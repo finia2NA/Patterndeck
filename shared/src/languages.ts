@@ -7,7 +7,7 @@ export const ALL_LANGUAGES_BY_REGION: { region: string; languages: string[] }[] 
   {
     region: 'Europe',
     languages: [
-      'French', 'German', 'Spanish', 'Italian', 'Portuguese',
+      'English', 'French', 'German', 'Spanish', 'Italian', 'Portuguese',
       'Dutch', 'Polish', 'Russian', 'Swedish', 'Norwegian',
       'Danish', 'Greek', 'Czech', 'Romanian', 'Hungarian',
       'Ukrainian', 'Finnish', 'Turkish',

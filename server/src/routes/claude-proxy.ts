@@ -45,6 +45,12 @@ function analyticsContext(body: Record<string, unknown>, fallback: Partial<AiAna
   };
 }
 
+function responseLanguage(body: Record<string, unknown>): string {
+  return typeof body.uiLanguage === 'string' && body.uiLanguage.trim().length > 0
+    ? body.uiLanguage.trim()
+    : 'English';
+}
+
 // Non-streaming: generate cards
 claudeProxyRouter.post('/cards', async (req, res, next) => {
   try {
@@ -58,7 +64,7 @@ claudeProxyRouter.post('/cards', async (req, res, next) => {
       resolvedCount = setting ? parseInt(setting, 10) : DEFAULT_CARD_COUNT;
     }
     logAI(req.userId!, 'cards', 'haiku');
-    const result = await generateCards(req.userId!, topic, language, resolvedCount, explanation, analyticsContext(req.body, {
+    const result = await generateCards(req.userId!, topic, language, resolvedCount, explanation, responseLanguage(req.body), analyticsContext(req.body, {
       appSessionId: req.appSessionId,
       deckTopic: String(topic),
       language: String(language),
@@ -78,7 +84,7 @@ claudeProxyRouter.post('/judge', async (req, res, next) => {
     const resolvedBrevity = brevity === 'brief' ? 'brief' : 'normal';
     logAI(req.userId!, `judge:${resolvedBrevity}`, 'haiku');
     const ctx = analyticsContext(req.body, { appSessionId: req.appSessionId, language: String(language) });
-    const result = await judgeAnswer(req.userId!, card, userAnswer, language, explanation, resolvedBrevity, {
+    const result = await judgeAnswer(req.userId!, card, userAnswer, language, explanation, resolvedBrevity, responseLanguage(req.body), {
       ...ctx,
       traceId: ctx.traceId ?? (ctx.studySessionId ? `answer:${ctx.studySessionId}:${ctx.cardIndex ?? 'unknown'}:${ctx.attemptNumber ?? 1}` : undefined),
     });
@@ -94,7 +100,7 @@ claudeProxyRouter.post('/explanation/stream', async (req, res, next) => {
       throw new AppError(400, 'MISSING_FIELDS', 'topic and language are required.');
     }
     logAI(req.userId!, 'explanation', 'sonnet');
-    await streamExplanationGeneric(req, res, req.userId!, topic, language, analyticsContext(req.body, {
+    await streamExplanationGeneric(req, res, req.userId!, topic, language, responseLanguage(req.body), analyticsContext(req.body, {
       appSessionId: req.appSessionId,
       deckTopic: String(topic),
       language: String(language),
@@ -112,7 +118,7 @@ claudeProxyRouter.post('/rejection', async (req, res, next) => {
     const resolvedBrevity = brevity === 'brief' ? 'brief' : 'normal';
     logAI(req.userId!, `rejection:${resolvedBrevity}`, 'sonnet');
     const ctx = analyticsContext(req.body, { appSessionId: req.appSessionId, language: String(language) });
-    const result = await reviewRejection(req.userId!, card, userAnswer, language, explanation, resolvedBrevity, {
+    const result = await reviewRejection(req.userId!, card, userAnswer, language, explanation, resolvedBrevity, responseLanguage(req.body), {
       ...ctx,
       traceId: ctx.traceId ?? (ctx.studySessionId ? `answer:${ctx.studySessionId}:${ctx.cardIndex ?? 'unknown'}:${ctx.attemptNumber ?? 1}` : undefined),
     });
@@ -129,7 +135,7 @@ claudeProxyRouter.post('/rate-session', async (req, res, next) => {
     }
     logAI(req.userId!, 'rate-session', 'haiku');
     const ctx = analyticsContext(req.body, { appSessionId: req.appSessionId, deckTopic: String(topic), language: String(language) });
-    const result = await rateSession(req.userId!, topic, language, cards, {
+    const result = await rateSession(req.userId!, topic, language, cards, responseLanguage(req.body), {
       ...ctx,
       traceId: ctx.traceId ?? (ctx.studySessionId ? `session_rating:${ctx.studySessionId}:${ctx.deckId ?? 'quick'}` : undefined),
     });
@@ -146,7 +152,7 @@ claudeProxyRouter.post('/explain-sentence', async (req, res, next) => {
     }
     logAI(req.userId!, 'explain-sentence', 'haiku');
     const ctx = analyticsContext(req.body, { appSessionId: req.appSessionId, language: String(language) });
-    const result = await explainSentence(req.userId!, card, language, explanation, {
+    const result = await explainSentence(req.userId!, card, language, explanation, responseLanguage(req.body), {
       ...ctx,
       traceId: ctx.traceId ?? (ctx.studySessionId ? `explain_sentence:${ctx.studySessionId}:${ctx.cardIndex ?? 'unknown'}` : undefined),
     });
@@ -163,7 +169,7 @@ claudeProxyRouter.post('/word-hint', async (req, res, next) => {
     }
     logAI(req.userId!, 'word-hint', 'haiku');
     const ctx = analyticsContext(req.body, { appSessionId: req.appSessionId, language: String(language) });
-    const result = await generateWordHint(req.userId!, word, english, targetLanguage, language, {
+    const result = await generateWordHint(req.userId!, word, english, targetLanguage, language, responseLanguage(req.body), {
       ...ctx,
       traceId: ctx.traceId ?? (ctx.studySessionId ? `word_hint:${ctx.studySessionId}:${ctx.cardIndex ?? 'unknown'}:${ctx.wordIndex ?? 0}` : undefined),
     });
@@ -179,7 +185,7 @@ claudeProxyRouter.post('/chat/stream', async (req, res, next) => {
       throw new AppError(400, 'MISSING_FIELDS', 'card, userAnswer, language, wasCorrect, and messages are required.');
     }
     logAI(req.userId!, 'chat', 'sonnet');
-    const systemPrompt = CARD_CHAT_PROMPT(language);
+    const systemPrompt = CARD_CHAT_PROMPT(language, responseLanguage(req.body));
     const cardContext = {
       english: card.english,
       targetLanguage: card.targetLanguage,

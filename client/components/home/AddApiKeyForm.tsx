@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useColors } from '@/constants/theme';
 import { setApiKey, validateApiKey } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 
 export function AddApiKeyForm({ onAdded }: { onAdded: () => void }) {
   const colors = useColors();
+  const { t } = useI18n();
   const [key, setKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,14 +19,14 @@ export function AddApiKeyForm({ onAdded }: { onAdded: () => void }) {
     try {
       const { valid, error: validationError } = await validateApiKey(trimmed);
       if (!valid) {
-        setError(validationError ?? 'Invalid API key.');
+        setError(validationError ?? t('apiKey.invalid'));
         return;
       }
       await setApiKey(trimmed);
       setKey('');
       onAdded();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save key.');
+      setError(e instanceof Error ? e.message : t('apiKey.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -52,7 +54,7 @@ export function AddApiKeyForm({ onAdded }: { onAdded: () => void }) {
         {loading ? (
           <ActivityIndicator color="#fff" size="small" />
         ) : (
-          <Text className="text-primary-foreground text-sm font-semibold">Verify & Save</Text>
+          <Text className="text-primary-foreground text-sm font-semibold">{t('common.verifySave')}</Text>
         )}
       </TouchableOpacity>
     </View>

@@ -3,6 +3,7 @@ import { View, Text, TextInput, Animated } from 'react-native';
 import { useColors } from '@/constants/theme';
 import { TouchTarget } from '@/components/TouchTarget';
 import { AnimatedTabbed } from '@/components/AnimatedTabbed';
+import { useI18n } from '@/lib/i18n';
 
 export interface AccountCardProps {
   email: string;
@@ -20,6 +21,7 @@ export interface AccountCardProps {
 
 export function AccountCard({ email, onEmailChange, password, onPasswordChange, error, loading, isLogin, onToggleMode, onSubmit, onForgotPassword, success }: AccountCardProps) {
   const colors = useColors();
+  const { t } = useI18n();
   const passwordRef = useRef<TextInput>(null);
   const successOpacity = useRef(new Animated.Value(0)).current;
   const formDim = useRef(new Animated.Value(1)).current;
@@ -46,17 +48,17 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
     <>
       <Text className="text-3xl font-bold text-foreground mb-2">
         {success
-          ? (isLogin ? 'Signed in!' : 'Account created!')
-          : 'Your account'}
+          ? (isLogin ? t('onboarding.signedInTitle') : t('onboarding.accountCreatedTitle'))
+          : t('onboarding.accountTitle')}
       </Text>
       <Text className="text-foreground-secondary text-sm leading-6 mb-6">
         {success
           ? (isLogin
-            ? 'Welcome back — your decks and settings are ready.'
-            : 'Your account is set up and ready to go.')
+            ? t('onboarding.signedInBody')
+            : t('onboarding.accountCreatedBody'))
           : (isLogin
-            ? 'Sign in with the email and password you used before.'
-            : 'Create an account to save your decks and study progress.')}
+            ? t('onboarding.signInBody')
+            : t('onboarding.accountBody'))}
       </Text>
 
       <Animated.View style={{ opacity: success ? formDim : 1 }}>
@@ -64,8 +66,8 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
           className="mb-5"
           variant="subtle"
           tabs={[
-            { value: 'signup', label: 'Create account' },
-            { value: 'signin', label: 'Sign in' },
+            { value: 'signup', label: t('onboarding.createAccount') },
+            { value: 'signin', label: t('onboarding.signIn') },
           ]}
           value={isLogin ? 'signin' : 'signup'}
           onChange={() => onToggleMode()}
@@ -73,7 +75,7 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
         />
 
         <View className="mb-4">
-        <Text className="text-foreground/80 text-sm font-medium mb-2">Email</Text>
+        <Text className="text-foreground/80 text-sm font-medium mb-2">{t('onboarding.email')}</Text>
         <View className="p-1 mb-3">
           <TextInput
             className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm"
@@ -89,12 +91,12 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
             editable={!loading && !success}
           />
         </View>
-        <Text className="text-foreground/80 text-sm font-medium mb-2">Password</Text>
+        <Text className="text-foreground/80 text-sm font-medium mb-2">{t('onboarding.password')}</Text>
         <View className="p-1">
           <TextInput
             ref={passwordRef}
             className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm"
-            placeholder="At least 8 characters"
+            placeholder={t('onboarding.passwordPlaceholder')}
             placeholderTextColor={colors.foreground_muted}
             value={password}
             onChangeText={onPasswordChange}
@@ -110,7 +112,7 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
 
       {success && (
         <Animated.Text style={{ opacity: successOpacity, color: colors.foreground, fontSize: 24, fontWeight: '500', textAlign: 'center', marginTop: 20 }}>
-          Success!
+          {t('onboarding.success')}
         </Animated.Text>
       )}
 
@@ -136,7 +138,7 @@ export function AccountCard({ email, onEmailChange, password, onPasswordChange, 
             disabled={!isLogin || loading}
             style={{ marginTop: 4, paddingHorizontal: 0 }}
           >
-            <Text className="text-foreground-secondary text-sm">Forgot password?</Text>
+            <Text className="text-foreground-secondary text-sm">{t('onboarding.forgotPassword')}</Text>
           </TouchTarget>
         </Animated.View>
       )}

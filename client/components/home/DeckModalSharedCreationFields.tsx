@@ -5,6 +5,7 @@ import { CARD_COUNTS, formatCardCount } from '@/constants/session';
 import { useColors } from '@/constants/theme';
 import type { Language, CardCount } from '@/constants/session';
 import { usePageSheetScrolling } from '@/components/PageSheetScrollContext';
+import { useI18n } from '@/lib/i18n';
 
 interface SharedCreationNameFieldProps {
   label: string;
@@ -66,9 +67,10 @@ export function SharedCreationOptionsSection({
   onCardCountChange,
   enabledLanguages,
 }: SharedCreationOptionsSectionProps) {
+  const { t } = useI18n();
   return (
     <>
-      <Text className="text-foreground/80 text-sm font-medium mb-3">Options</Text>
+      <Text className="text-foreground/80 text-sm font-medium mb-3">{t('deck.options')}</Text>
       <View className="flex-row gap-3 mb-6">
         <PillDropdown
           key={enabledLanguages.join('|')}

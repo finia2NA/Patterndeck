@@ -13,6 +13,7 @@ import { DeckModalCreateTab } from './DeckModalCreateTab';
 import { DeckModalCsvTab } from './DeckModalCsvTab';
 import { useColors } from '@/constants/theme';
 import { useEnabledLanguages } from '@/hooks/state/persistent/useSettings';
+import { useI18n } from '@/lib/i18n';
 
 async function triggerCsvDownload(filename: string, csv: string) {
   if (Platform.OS === 'web') {
@@ -95,6 +96,7 @@ export function DeckModal({
   initialData,
 }: DeckModalProps) {
   const colors = useColors();
+  const { t } = useI18n();
   const isEdit = editNode !== null && editNode !== undefined;
   const isCollection = isEdit && editNode.deck === null;
   const canUseCsvTab = !isEdit;
@@ -190,9 +192,9 @@ export function DeckModal({
         explanation,
       });
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'An error occurred.';
+      const message = e instanceof Error ? e.message : t('common.errorGeneric');
       if (Platform.OS === 'web') window.alert(message);
-      else Alert.alert('Save failed', message);
+      else Alert.alert(t('deck.saveFailed'), message);
     } finally {
       setSubmitting(false);
     }
@@ -222,9 +224,9 @@ export function DeckModal({
       const { filename, csv } = await exportNodeCsv(editNode.id);
       await triggerCsvDownload(filename, csv);
     } catch (e: any) {
-      Alert.alert('Export failed', e?.message ?? 'Unknown error');
+      Alert.alert(t('deck.exportFailed'), e?.message ?? t('deck.unknownError'));
     }
-  }, [editNode]);
+  }, [editNode, t]);
 
   const handleCsvImport = useCallback(async () => {
     if (!csvContent || !onCsvImport || importStatus.state === 'importing') return;
@@ -244,9 +246,9 @@ export function DeckModal({
         setImportStatus({ state: 'idle' });
       }
     } catch (e: any) {
-      setImportStatus({ state: 'error', message: e?.message ?? 'Import failed.' });
+      setImportStatus({ state: 'error', message: e?.message ?? t('deck.importFailed') });
     }
-  }, [csvContent, onCsvImport, importStatus.state, name, language, cardCount]);
+  }, [csvContent, onCsvImport, importStatus.state, name, language, cardCount, t]);
 
   const isImporting = importStatus.state === 'importing';
   const canSubmit = name.trim().length > 0 && (isCollection || topic.trim().length > 0);
@@ -254,16 +256,16 @@ export function DeckModal({
   const csvCanImport = showingCsvTab && csvContent !== null && !isImporting;
 
   const title = showingCsvTab
-    ? 'Import CSV'
-    : isCollection ? 'Edit Collection' : isEdit ? 'Edit Deck' : 'New Deck';
+    ? t('deck.importCsv')
+    : isCollection ? t('deck.editCollection') : isEdit ? t('deck.editDeck') : t('deck.newDeck');
 
   const confirmText = showingCsvTab
-    ? (isImporting ? 'Importing…' : 'Import')
+    ? (isImporting ? t('common.importing') : t('common.import'))
     : submitting
-      ? 'Saving…'
+      ? t('common.saving')
       : isEdit
-        ? 'Save'
-        : 'Create';
+        ? t('common.save')
+        : t('common.create');
   const confirmDisabled = showingCsvTab ? !csvCanImport : !canSubmit || submitting;
   const handleConfirm = showingCsvTab ? handleCsvImport : handleSubmit;
 
@@ -307,7 +309,7 @@ export function DeckModal({
       <PageSheetModal
         visible={visible}
         title={title}
-        cancelText="Cancel"
+        cancelText={t('common.cancel')}
         onCancel={onClose}
         confirmText={confirmText}
         onConfirm={handleConfirm}
@@ -315,7 +317,7 @@ export function DeckModal({
       >
         <View className="items-center py-16">
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text className="text-foreground-secondary text-base mt-4">Loading deck…</Text>
+          <Text className="text-foreground-secondary text-base mt-4">{t('deck.loadingDeck')}</Text>
         </View>
       </PageSheetModal>
     );
@@ -325,23 +327,23 @@ export function DeckModal({
     <PageSheetModal
       visible={visible}
       title={title}
-      cancelText="Cancel"
+      cancelText={t('common.cancel')}
       onCancel={onClose}
       confirmText={confirmText}
       onConfirm={handleConfirm}
       confirmDisabled={confirmDisabled}
       confirmCloses={false}
-      confirmConfirmationTitle={promptChanged && !showingCsvTab ? 'Regenerate explanation?' : undefined}
-      confirmConfirmationMessage={promptChanged && !showingCsvTab ? 'This will regenerate the explanation for this deck.' : undefined}
-      confirmConfirmationActionText={promptChanged && !showingCsvTab ? 'Confirm' : undefined}
+      confirmConfirmationTitle={promptChanged && !showingCsvTab ? t('deck.regenerateTitle') : undefined}
+      confirmConfirmationMessage={promptChanged && !showingCsvTab ? t('deck.regenerateMessage') : undefined}
+      confirmConfirmationActionText={promptChanged && !showingCsvTab ? t('deck.confirm') : undefined}
     >
       {canUseCsvTab && (
         <AnimatedTabbed
           className="mb-6"
           variant="primary"
           tabs={[
-            { value: 'create', label: 'Create Deck' },
-            { value: 'csv', label: 'Import CSV' },
+            { value: 'create', label: t('deck.createDeck') },
+            { value: 'csv', label: t('deck.importCsv') },
           ]}
           value={activeTab}
           onChange={setActiveTab}

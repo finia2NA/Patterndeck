@@ -6,6 +6,7 @@ import { submitDeckReview } from '@/lib/api';
 import { DID_NOT_KNOW_ANSWER, type CardAttempt } from '@/lib/types';
 import type { DeckInfo } from '@/hooks/useMultiDeckSession';
 import { DeckRatingCard, type DeckReviewDraft } from './DeckRatingCard';
+import { useI18n } from '@/lib/i18n';
 
 interface SessionCompleteScreenProps {
   completedCards: CardAttempt[];
@@ -44,6 +45,7 @@ export function SessionCompleteScreen({
 }: SessionCompleteScreenProps) {
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { t } = useI18n();
 
   const { isQuickStudy, deckGroupEntries, quickCards } = useMemo(() => {
     // Group cards by deckId (undefined = quick study)
@@ -89,13 +91,13 @@ export function SessionCompleteScreen({
       try {
         await Promise.all(deckGroupEntries.map(async ([deckId, attempts]) => {
           const draft = deckReviewDrafts[deckId];
-          if (!draft) throw new Error('Still generating deck ratings. Please wait a moment and try again.');
+          if (!draft) throw new Error(t('session.ratingWaitError'));
           const correctCount = attempts.filter(a => a.answers.length === 1).length;
           const totalCount = attempts.length;
           await submitDeckReview(deckId, draft.userStars, draft.aiStars, draft.aiRecap, studyMode, studySessionId, correctCount, totalCount);
         }));
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Could not save your deck reviews. Please try again.';
+        const message = err instanceof Error ? err.message : t('session.reviewSaveError');
         setSaveError(message);
         setSubmitting(false);
         return;
@@ -119,9 +121,9 @@ export function SessionCompleteScreen({
         {/* Header */}
         <View className="items-center gap-2 py-4">
           <Text className="text-5xl">🎉</Text>
-          <Text className="text-foreground text-2xl font-bold">Session complete!</Text>
+          <Text className="text-foreground text-2xl font-bold">{t('session.complete')}</Text>
           <Text className="text-foreground-secondary text-sm text-center">
-            {firstTryCorrect}/{totalCards} cards correct on first try
+            {t('session.cardsCorrect', { correct: firstTryCorrect, total: totalCards })}
           </Text>
         </View>
 
@@ -129,7 +131,7 @@ export function SessionCompleteScreen({
         {quickCards.length > 0 && (
           <View className="bg-surface border border-border rounded-3xl p-6 gap-1">
             <View className="flex-row items-center justify-between gap-3 mb-2">
-              <Text className="text-foreground font-semibold text-base">Cards reviewed</Text>
+              <Text className="text-foreground font-semibold text-base">{t('session.cardsReviewed')}</Text>
               {onMakeDeck && (
                 <TouchableOpacity
                   className={`px-3 py-2 rounded-xl ${quickDeckCreated ? 'bg-background-muted' : 'bg-primary'}`}
@@ -138,7 +140,7 @@ export function SessionCompleteScreen({
                   activeOpacity={0.85}
                 >
                   <Text className={`text-xs font-semibold ${quickDeckCreated ? 'text-foreground-muted' : 'text-primary-foreground'}`}>
-                    {quickDeckCreated ? 'Deck Created' : 'Make this a deck'}
+                    {quickDeckCreated ? t('session.deckCreated') : t('session.makeDeck')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -154,7 +156,7 @@ export function SessionCompleteScreen({
             <View key={deckId} className="bg-surface border border-border rounded-3xl p-6 gap-4">
               <View className="gap-1">
                 <Text className="text-foreground font-semibold text-base mb-2">
-                  {info?.deckName ?? 'Deck'}
+                  {info?.deckName ?? t('session.deck')}
                 </Text>
                 {deckCards.map((a, i) => <AttemptRow key={i} attempt={a} />)}
               </View>
@@ -188,7 +190,7 @@ export function SessionCompleteScreen({
             <ActivityIndicator size="small" color={colors.primary_foreground} />
           ) : (
             <Text className={`font-bold text-base ${doneDisabled ? 'text-foreground-muted' : 'text-primary-foreground'}`}>
-              {!isQuickStudy && !allRatingsReady ? 'Waiting for ratings…' : 'Done'}
+              {!isQuickStudy && !allRatingsReady ? t('session.waitingRatings') : t('common.done')}
             </Text>
           )}
         </TouchableOpacity>

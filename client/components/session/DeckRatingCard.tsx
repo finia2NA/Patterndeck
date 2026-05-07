@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useColors } from '@/constants/theme';
 import { rateSession } from '@/lib/api';
 import type { CardAttempt } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 
 export interface DeckReviewDraft {
   userStars: number;
@@ -22,6 +23,7 @@ interface DeckRatingCardProps {
 
 export function DeckRatingCard({ nodeId, topic, language, cards, disabled = false, studySessionId, onDraftChange }: DeckRatingCardProps) {
   const colors = useColors();
+  const { t } = useI18n();
   const [aiStars, setAiStars] = useState<number | null>(null);
   const [userStars, setUserStars] = useState<number | null>(null);
   const [recap, setRecap] = useState<string>('');
@@ -64,12 +66,12 @@ export function DeckRatingCard({ nodeId, topic, language, cards, disabled = fals
 
   return (
     <View className="rounded-2xl p-1 gap-3">
-      <Text className="text-foreground font-medium text-sm">How did this deck feel?</Text>
+      <Text className="text-foreground font-medium text-sm">{t('session.deckFeel')}</Text>
 
       {loading ? (
         <View className="flex-row items-center gap-3 py-2">
           <ActivityIndicator size="small" color={colors.primary} />
-          <Text className="text-foreground-secondary text-sm">AI is rating your session…</Text>
+          <Text className="text-foreground-secondary text-sm">{t('session.aiRating')}</Text>
         </View>
       ) : (
         <>

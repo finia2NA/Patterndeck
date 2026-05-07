@@ -11,6 +11,7 @@ import {
 } from '@/lib/api';
 import type { Card, DeckCard, DeckData } from '@/lib/types';
 import type { AnalyticsContext } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 
 interface UseMultiDeckSessionParams {
   nodeId: string;
@@ -39,6 +40,7 @@ interface DeckMeta extends DeckData {
 
 export function useMultiDeckSession({ nodeId, selectedDeckIds, studySessionId, studyMode }: UseMultiDeckSessionParams) {
   const router = useRouter();
+  const { t } = useI18n();
   const selectedDeckIdsKey = selectedDeckIds?.join(',') ?? '';
 
   const [loading, setLoading] = useState(true);
@@ -90,7 +92,7 @@ export function useMultiDeckSession({ nodeId, selectedDeckIds, studySessionId, s
           ? explicitIds
           : await getDescendantDeckIds(nodeId);
         if (ids.length === 0) {
-          setLoadError('No decks found for this item.');
+          setLoadError(t('session.noDecksFound'));
           setLoading(false);
           return;
         }
@@ -125,7 +127,7 @@ export function useMultiDeckSession({ nodeId, selectedDeckIds, studySessionId, s
         }
 
         if (metaList.length === 0) {
-          setLoadError('No decks have finished generating their explanations yet.');
+          setLoadError(t('session.noReadyDecks'));
           setLoading(false);
           return;
         }
@@ -164,13 +166,13 @@ export function useMultiDeckSession({ nodeId, selectedDeckIds, studySessionId, s
           setCards(allCards);
         }
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : 'Failed to generate session.');
+        setLoadError(e instanceof Error ? e.message : t('common.errorGeneric'));
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [nodeId, router, generateForDeck, selectedDeckIdsKey]);
+  }, [nodeId, router, generateForDeck, selectedDeckIdsKey, t]);
 
   // In sequential mode, when the current deck's cards are exhausted,
   // pre-generate the next-not-yet-generated deck's cards.

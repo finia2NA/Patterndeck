@@ -27,11 +27,13 @@ import {
 import type { TreeNode } from '@/lib/types';
 import { useEnabledLanguages } from '@/hooks/state/persistent/useSettings';
 import { getLocalSetting } from '@/hooks/state/persistent/settingsStore';
+import { useI18n } from '@/lib/i18n';
 
 export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { t } = useI18n();
   const { isSmallScreen } = useScreenSize();
   const useNativePlatformButtonStyle = Platform.OS === 'ios';
   const isFocused = useIsFocused();
@@ -227,7 +229,7 @@ export default function Home() {
       setEditNode(null);
       refresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'An error occurred.');
+      alert(e instanceof Error ? e.message : t('common.errorGeneric'));
     }
   }, [editNode, editNodePathStr, refresh]);
 
@@ -280,7 +282,7 @@ export default function Home() {
             horizontalPadding={useNativePlatformButtonStyle ? 10 : 8}
             verticalPadding={useNativePlatformButtonStyle ? 10 : 8}
             cornerRadius={useNativePlatformButtonStyle ? 20 : 16}
-            accessibilityLabel="Settings"
+            accessibilityLabel={t('common.settings')}
             style={{
               width: useNativePlatformButtonStyle ? 40 : 34,
               height: useNativePlatformButtonStyle ? 40 : 34,
@@ -301,27 +303,27 @@ export default function Home() {
         >
           {!isSmallScreen && (
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-foreground-secondary text-sm font-semibold">Decks</Text>
+              <Text className="text-foreground-secondary text-sm font-semibold">{t('home.decks')}</Text>
               <View className="flex-row items-center">
                 <TouchableOpacity
                   className="px-4 py-2 rounded-xl bg-primary"
                   onPress={handleCreate}
                   activeOpacity={0.85}
                 >
-                  <Text className="text-primary-foreground text-sm font-semibold">New Deck</Text>
+                  <Text className="text-primary-foreground text-sm font-semibold">{t('home.newDeck')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
           {loading ? (
             <View className="items-center py-16">
-              <Text className="text-foreground-secondary text-base">Loading…</Text>
+              <Text className="text-foreground-secondary text-base">{t('common.loading')}</Text>
             </View>
           ) : (
             <>
               {refreshing && (
                 <View className="items-center py-2">
-                  <Text className="text-foreground-muted text-xs">Updating…</Text>
+                  <Text className="text-foreground-muted text-xs">{t('common.updating')}</Text>
                 </View>
               )}
               <DeckTree tree={tree} onStudy={handleStudy} onEdit={handleEdit} onHistory={handleHistory} />
@@ -359,7 +361,7 @@ export default function Home() {
             <TextInput
               className="no-focus-ring flex-1 text-foreground placeholder:text-foreground-muted text-base px-5 pb-4"
               style={{ paddingTop: 48, textAlignVertical: 'top', minHeight: 100 }}
-              placeholder="Quick study — type any grammar topic"
+              placeholder={t('home.quickStudyPlaceholder')}
               placeholderTextColor={colors.foreground_muted}
               value={topic}
               onChangeText={setTopic}
@@ -378,7 +380,7 @@ export default function Home() {
             activeOpacity={0.85}
           >
             <Text className={`text-base font-semibold text-primary-foreground`}>
-              Start Session
+              {t('home.startSession')}
             </Text>
           </TouchableOpacity>
         </View>

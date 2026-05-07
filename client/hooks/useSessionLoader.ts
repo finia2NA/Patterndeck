@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { getAuthToken } from '@/lib/storage';
 import { generateExplanation, generateCards } from '@/lib/api';
 import type { AnalyticsContext, Card, LoadPhase } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 
 interface UseSessionLoaderParams {
   topic: string;
@@ -14,6 +15,7 @@ interface UseSessionLoaderParams {
 
 export function useSessionLoader({ topic, language, cardCount, existingExplanation, analyticsContext }: UseSessionLoaderParams) {
   const router = useRouter();
+  const { t } = useI18n();
 
   const [loading, setLoading] = useState(true);
   const [loadPhase, setLoadPhase] = useState<LoadPhase>('explanation');
@@ -26,6 +28,11 @@ export function useSessionLoader({ topic, language, cardCount, existingExplanati
   const addCost = (usd: number) => setTotalCost(prev => prev + usd);
 
   useEffect(() => {
+    let cancelled = false;
+    const addCostIfCurrent = (usd: number) => {
+      if (!cancelled) addCost(usd);
+    };
+
     async function load() {
       try {
         const token = await getAuthToken();
@@ -37,27 +44,33 @@ export function useSessionLoader({ topic, language, cardCount, existingExplanati
           const { wasTruncated } = await generateExplanation(
             topic, language,
             (chunk) => {
+              if (cancelled) return;
               fullExplanation += chunk;
               setExplanation(prev => prev + chunk);
             },
-            addCost,
+            addCostIfCurrent,
             analyticsContext,
           );
+          if (cancelled) return;
           setExplanationTruncated(wasTruncated);
         }
 
+        if (cancelled) return;
         setLoadPhase('cards');
         const result = await generateCards(topic, language, cardCount, fullExplanation, analyticsContext);
-        if (result.cost) addCost(result.cost);
+        if (cancelled) return;
+        if (result.cost) addCostIfCurrent(result.cost);
         setCards(result.cards);
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : 'Failed to generate session.');
+        if (cancelled) return;
+        setLoadError(e instanceof Error ? e.message : t('common.errorGeneric'));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     load();
-  }, [cardCount, existingExplanation, language, router, topic]);
+    return () => { cancelled = true; };
+  }, [cardCount, existingExplanation, language, router, t, topic]);
 
   return {
     loading,

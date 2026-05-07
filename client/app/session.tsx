@@ -33,6 +33,7 @@ import {
 import { SessionTopBar, TOPBAR_HEIGHT } from '@/components/session/SessionTopBar';
 import { useScreenSize } from '@/hooks/useScreenSize';
 import { analytics, appSessionId } from '@/lib/analytics';
+import { useI18n } from '@/lib/i18n';
 
 const SIDEBAR_INITIAL_WIDTH = 320;
 
@@ -207,6 +208,7 @@ function SessionUI({
   const { isSmallScreen } = useScreenSize();
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { t } = useI18n();
 
   const [showOverlay, setShowOverlay] = useState(showExplanationOverlay);
   const [panelNarrowed, setPanelNarrowed] = useState(false);
@@ -355,7 +357,7 @@ function SessionUI({
       <View className="flex-1 bg-background items-center justify-center px-8 gap-4" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
         <Text className="text-error text-base text-center">{loadError}</Text>
         <TouchableOpacity className="bg-surface rounded-xl px-6 py-3" onPress={handleBack}>
-          <Text className="text-foreground font-semibold">← Go back</Text>
+          <Text className="text-foreground font-semibold">{t('session.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -367,7 +369,7 @@ function SessionUI({
     return (
       <View className="flex-1 bg-background items-center justify-center px-8 gap-4" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text className="text-foreground-secondary text-base">Generating flashcards…</Text>
+        <Text className="text-foreground-secondary text-base">{t('session.generatingCards')}</Text>
       </View>
     );
   }

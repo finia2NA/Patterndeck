@@ -4,6 +4,7 @@ export const DID_NOT_KNOW_ANSWER = '(Did not know)';
 
 export interface Card {
   id: string;
+  // Legacy name: this is the translate-from/source sentence, localized to the UI language.
   english: string;
   targetLanguage: string;
   sentenceContext?: string;

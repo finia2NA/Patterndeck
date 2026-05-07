@@ -59,7 +59,7 @@ server/
 
 ## Shared package (`@patterndeck/shared`)
 
-Constants shared with the client (language lists, setting defaults, card count options) live in `shared/` at the repo root and are imported as `@patterndeck/shared`. In dev, `tsx` consumes the TypeScript source directly via the `"source"` export condition — no pre-build needed. For production (`pnpm build:server`), the shared package is compiled first automatically (`pnpm build:shared && tsc`).
+Constants shared with the client (language lists, UI locales, setting defaults, card count options) live in `shared/` at the repo root and are imported as `@patterndeck/shared`. In dev, `tsx` consumes the TypeScript source directly via the `"source"` export condition — no pre-build needed. For production (`pnpm build:server`), the shared package is compiled first automatically (`pnpm build:shared && tsc`).
 
 ## Routes reference
 
@@ -69,10 +69,10 @@ All routes require `Authorization: Bearer <JWT>` except the auth endpoints.
 
 | Method | Path                    | Description                                  |
 | ------ | ----------------------- | -------------------------------------------- |
-| POST   | `/register`             | Email + password registration, returns JWT   |
+| POST   | `/register`             | Email + password registration, optionally stores initial UI language, returns JWT |
 | POST   | `/login`                | Email + password login, returns JWT          |
-| POST   | `/apple`                | Apple Sign In, returns JWT                   |
-| POST   | `/google`               | Google OAuth2, returns JWT                   |
+| POST   | `/apple`                | Apple Sign In, optionally stores UI language for new users, returns JWT |
+| POST   | `/google`               | Google OAuth2, optionally stores UI language for new users, returns JWT |
 | GET    | `/me`                   | Current user info + available auth methods   |
 | POST   | `/validate-key`         | Test a Claude API key, returns validity flag  |
 | POST   | `/forgot-password`      | Send password reset email via Resend          |

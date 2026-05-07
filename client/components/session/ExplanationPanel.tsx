@@ -14,15 +14,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/constants/theme';
 import { GrammarMarkdown } from './GrammarMarkdown';
 import { TouchTarget } from '@/components/TouchTarget';
+import { useI18n } from '@/lib/i18n';
 
 export const PEEK_HEIGHT = 72;
 
 // ─── Small reusable pieces ────────────────────────────────────────────────────
 
 export function TruncationWarning() {
+  const { t } = useI18n();
   return (
     <View className="mt-3 px-3 py-2 bg-background-warm border border-border rounded-lg">
-      <Text className="text-xs" style={{ color: '#B87010' }}>Explanation was cut off — try a more specific topic.</Text>
+      <Text className="text-xs" style={{ color: '#B87010' }}>{t('session.explanationCutOff')}</Text>
     </View>
   );
 }
@@ -40,6 +42,7 @@ export function SidePanel({
   explanation: string;
   wasTruncated: boolean;
 }) {
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const c = useColors();
   const [width, setWidth] = useState(320);
@@ -157,6 +160,7 @@ export function BottomSheet({
   wasTruncated: boolean;
 }) {
   const c = useColors();
+  const { t } = useI18n();
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
@@ -250,7 +254,7 @@ export function BottomSheet({
         <View className="flex-row items-center justify-between px-5 pb-2">
           <View className="flex-1 pr-3">
             <Text selectable={false} className="text-foreground-secondary text-xs font-semibold uppercase tracking-widest">
-              Grammar Reference
+              {t('session.grammarReference')}
             </Text>
             {!!topic.trim() && (
               <Text selectable={false} className="text-foreground text-sm font-semibold mt-1" numberOfLines={1}>
@@ -265,7 +269,7 @@ export function BottomSheet({
           </View>
           {expanded && (
             <TouchTarget onPress={() => snapTo(false)} style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
-              <Text className="text-foreground-secondary text-xs">↓ Dismiss</Text>
+              <Text className="text-foreground-secondary text-xs">{t('session.dismiss')}</Text>
             </TouchTarget>
           )}
         </View>

@@ -25,6 +25,7 @@ Patterndeck and goes beyond traditional Flashcard apps by fully generating struc
 
 PatternDeck is built to keep study sessions responsive and continuous, even when generating large amounts of AI-driven content.
 - Explanations are streamed into the app as they’re generated, so users can start reading immediately instead of waiting for a full response. When creating decks that require longer processing, generation runs in the background, allowing the interface to stay fast and usable.
+- Localization using i18n allows for studying from different native languages.
 - Because the system relies heavily on AI, usage is tracked and controlled centrally. The app manages both per-user and global limits to keep costs predictable while still allowing flexible usage patterns.
 - Study content and progress are organized around a hierarchical collection system in the familiar Anki format, with scheduling logic built directly into the data model to support spaced repetition over time.
 - Throughout the app, analytics are used to understand how sessions unfold, how AI features are used, and where failures occur. This makes it possible to iterate on both the learning experience and the underlying system.
@@ -55,6 +56,7 @@ client/   React Native / Expo app (iOS, Android, web) server/   Express + Prisma
 #### Client
 - Expo Router-based React Native app  
 - Study session UI with streaming explanations and answer evaluation  
+- Lightweight localization layer with English and German UI support  
 - Deck tree interface for nested organization  
 - Notification and scheduling controls  
 - Integrated analytics and error tracking  
@@ -72,6 +74,7 @@ client/   React Native / Expo app (iOS, Android, web) server/   Express + Prisma
 
 - Sonnet: explanations, chat, feedback  
 - Haiku: card generation, answer evaluation  
+- Prompts distinguish UI response language from the language being studied  
 - Streaming responses via SSE  
 - Each request logs:
   - token usage  
@@ -190,6 +193,7 @@ This project explores:
 - AI-assisted learning systems  
 - Cost-aware LLM infrastructure  
 - Real-time feedback loops  
+- Multilingual UX for AI-generated educational content  
 - Cross-platform product architecture  
 
 ---

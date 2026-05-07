@@ -38,39 +38,38 @@ import { ApiKeyCard } from '@/components/onboarding/ApiKeyCard';
 import { ForgotPasswordCard } from '@/components/onboarding/ForgotPasswordCard';
 import { analytics } from '@/lib/analytics';
 import { BrandLogo } from '@/components/BrandLogo';
+import { useI18n } from '@/lib/i18n';
+import type { TranslationKey } from '@/lib/i18n';
 
 // ─── Card content ────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = 4;
 const BACKEND_DEBUG_UI_ENABLED = Constants.expoConfig?.extra?.backendDebugUiEnabled !== false;
 
-const WelcomeCard = memo(function WelcomeCard() {
+const WelcomeCard = memo(function WelcomeCard({ t }: { t: (key: TranslationKey) => string }) {
   return (
     <>
       <BrandLogo size={58} wordmarkSize={26} style={styles.welcomeBrand} />
       <Text className="text-4xl font-bold text-foreground mb-3">
-        Welcome to your{'\n'}grammar study partner
+        {t('onboarding.welcomeTitle')}
       </Text>
       <Text className="text-foreground-secondary text-base leading-7">
-        PatternDeck is your AI-powered grammar study partner.
-        Tell it what you want to practise, and it will generate
-        a custom set of flashcards tailored to your topic — in any
-        language you choose.
+        {t('onboarding.welcomeBody')}
       </Text>
     </>
   );
 });
 
-const HowItWorksCard = memo(function HowItWorksCard() {
+const HowItWorksCard = memo(function HowItWorksCard({ t }: { t: (key: TranslationKey) => string }) {
   return (
     <>
       <Text className="text-3xl font-bold text-foreground mb-5">
-        How it works
+        {t('onboarding.howTitle')}
       </Text>
       {[
-        ['📝', 'Pick a topic', 'Type what you want to study, e.g. "Japanese conditionals" or "Spanish subjunctive".'],
-        ['🤖', 'AI generates cards', 'Claude creates a grammar explanation and a set of flashcards just for that topic.'],
-        ['✍️', 'Practise & get feedback', 'Translate each sentence. Claude grades your answer and explains any mistakes.'],
+        ['📝', t('onboarding.pickTopicTitle'), t('onboarding.pickTopicBody')],
+        ['🤖', t('onboarding.aiCardsTitle'), t('onboarding.aiCardsBody')],
+        ['✍️', t('onboarding.practiceTitle'), t('onboarding.practiceBody')],
       ].map(([icon, title, desc]) => (
         <View key={title} className="flex-row mb-5">
           <Text className="text-2xl mr-3">{icon}</Text>
@@ -84,22 +83,22 @@ const HowItWorksCard = memo(function HowItWorksCard() {
   );
 });
 
-const AlphaWarningCard = memo(function AlphaWarningCard() {
+const AlphaWarningCard = memo(function AlphaWarningCard({ t }: { t: (key: TranslationKey) => string }) {
   return (
     <>
       <Text className="text-3xl font-bold text-foreground mb-3">
-        Alpha version
+        {t('onboarding.alphaTitle')}
       </Text>
       <Text className="text-foreground-secondary text-base leading-7 mb-4">
-        PatternDeck is in early development. Future updates may reset your data, including saved decks and collections.
+        {t('onboarding.alphaBody1')}
       </Text>
       <Text className="text-foreground-secondary text-base leading-7">
-        For now, use it to explore the concept and practise grammar freely — but don&apos;t invest time building elaborate collections just yet.
+        {t('onboarding.alphaBody2')}
       </Text>
       <View className="mt-4 flex-row border-l-2 border-foreground-secondary pl-3 gap-2">
         <Text className="text-sm leading-6">💡</Text>
         <Text className="text-foreground-secondary text-sm leading-6 flex-1">
-          You can also use the CSV export feature to save any work you would like to stick around!
+          {t('onboarding.alphaTip')}
         </Text>
       </View>
     </>
@@ -239,6 +238,7 @@ function BackendHostModal({ visible, onClose }: { visible: boolean; onClose: () 
 export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const [step, setStep] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -286,7 +286,7 @@ export default function Onboarding() {
 
   async function handleSubmitAccount() {
     if (!email.trim() || !password.trim()) {
-      setError('Please enter your email and password.');
+      setError(t('onboarding.missingCredentials'));
       return;
     }
     if (!isLogin) {
@@ -316,7 +316,7 @@ export default function Onboarding() {
       setAccountSuccess(true);
     } catch (e) {
       setLoading(false);
-      setError(e instanceof Error ? e.message : 'An error occurred.');
+      setError(e instanceof Error ? e.message : t('common.errorGeneric'));
     }
   }
 
@@ -330,7 +330,7 @@ export default function Onboarding() {
       await forgotPassword(trimmed);
       setForgotSent(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'An error occurred.');
+      setError(e instanceof Error ? e.message : t('common.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -339,7 +339,7 @@ export default function Onboarding() {
   async function handleSubmitKey() {
     const trimmed = apiKey.trim();
     if (!trimmed) {
-      setError('Please enter your API key.');
+      setError(t('onboarding.enterApiKey'));
       return;
     }
     setError(null);
@@ -347,14 +347,14 @@ export default function Onboarding() {
     try {
       const result = await validateApiKey(trimmed);
       if (!result.valid) {
-        setError(`Could not verify key: ${result.error ?? 'Unknown error'}`);
+        setError(t('onboarding.keyVerifyFailed', { error: result.error ?? t('deck.unknownError') }));
         return;
       }
       await setApiKey(trimmed);
       await hydrateSettings();
       router.replace('/home');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'An error occurred.');
+      setError(e instanceof Error ? e.message : t('common.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -488,9 +488,9 @@ export default function Onboarding() {
             >
               <Animated.View style={{ flexDirection: 'row', width: `${TOTAL_STEPS * 100}%`, transform: [{ translateX: cardAnimX }] }}>
                 {([
-                  <WelcomeCard key="welcome" />,
-                  <HowItWorksCard key="how-it-works" />,
-                  <AlphaWarningCard key="alpha-warning" />,
+                  <WelcomeCard key="welcome" t={t} />,
+                  <HowItWorksCard key="how-it-works" t={t} />,
+                  <AlphaWarningCard key="alpha-warning" t={t} />,
                   showForgotPassword
                     ? <ForgotPasswordCard key="forgot-card" email={email} onEmailChange={setEmail} error={step === 3 ? error : null} loading={loading} sent={forgotSent} />
                     : showApiKeyForm
@@ -514,7 +514,7 @@ export default function Onboarding() {
               accessibilityElementsHidden={!canGoBack}
               importantForAccessibility={canGoBack ? 'auto' : 'no-hide-descendants'}
             >
-              <Text className="text-foreground/80 font-semibold">Back</Text>
+              <Text className="text-foreground/80 font-semibold">{t('common.back')}</Text>
             </TouchableOpacity>
             {isForgotStep ? (
               !forgotSent ? (
@@ -526,7 +526,7 @@ export default function Onboarding() {
                   {loading ? (
                     <ActivityIndicator color="white" />
                   ) : (
-                    <Text className="text-primary-foreground font-semibold">Send Link</Text>
+                    <Text className="text-primary-foreground font-semibold">{t('onboarding.sendLink')}</Text>
                   )}
                 </TouchableOpacity>
               ) : (
@@ -541,12 +541,12 @@ export default function Onboarding() {
                 {loading ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text className="text-primary-foreground font-semibold">Verify & Continue</Text>
+                  <Text className="text-primary-foreground font-semibold">{t('common.verifyContinue')}</Text>
                 )}
               </TouchableOpacity>
             ) : isAccountStep ? (
               accountSuccess ? (
-                <RainbowButton onPress={handlePostAccountNext} label={isLogin ? 'Redirecting…' : 'Next'} />
+                <RainbowButton onPress={handlePostAccountNext} label={isLogin ? t('onboarding.redirecting') : t('common.next')} />
               ) : (
                 <TouchableOpacity
                   className={`flex-1 py-3.5 rounded-xl items-center ${loading ? 'bg-primary/70' : 'bg-primary'}`}
@@ -556,7 +556,7 @@ export default function Onboarding() {
                   {loading ? (
                     <ActivityIndicator color="white" />
                   ) : (
-                    <Text className="text-primary-foreground font-semibold">{isLogin ? 'Sign In' : 'Create Account'}</Text>
+                    <Text className="text-primary-foreground font-semibold">{isLogin ? t('onboarding.signIn') : t('onboarding.createAccount')}</Text>
                   )}
                 </TouchableOpacity>
               )
@@ -565,7 +565,7 @@ export default function Onboarding() {
                 className="flex-1 py-3.5 rounded-xl bg-primary items-center"
                 onPress={() => goToStep(step + 1)}
               >
-                <Text className="text-primary-foreground font-semibold">Next</Text>
+                <Text className="text-primary-foreground font-semibold">{t('common.next')}</Text>
               </TouchableOpacity>
             )}
           </View>

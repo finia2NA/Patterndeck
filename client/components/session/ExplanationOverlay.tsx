@@ -11,6 +11,7 @@ import { Colors, useColors } from '@/constants/theme';
 import type { LoadPhase } from '@/lib/types';
 import { GrammarMarkdown } from './GrammarMarkdown';
 import { TruncationWarning } from './ExplanationPanel';
+import { useI18n } from '@/lib/i18n';
 
 export interface OverlayDeck {
   topic: string;
@@ -36,6 +37,7 @@ interface ExplanationOverlayProps {
 export function ExplanationOverlay({
   topic, clarification, explanation, wasTruncated, loading, loadPhase, onStart, onBack, insets, allDecks,
 }: ExplanationOverlayProps) {
+  const { t } = useI18n();
   const colors = useColors();
   const [deckIndex, setDeckIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -134,12 +136,12 @@ export function ExplanationOverlay({
           <View className="flex-row items-center justify-center gap-3 py-4">
             <ActivityIndicator size="small" color={Colors.primary} />
             <Text className="text-foreground-secondary text-sm">
-              {loadPhase === 'cards' ? 'Generating flashcards…' : 'Generating explanation…'}
+              {loadPhase === 'cards' ? t('session.generatingCards') : t('session.generatingExplanation')}
             </Text>
           </View>
         ) : (
           <TouchableOpacity className="bg-primary rounded-2xl py-4 items-center" onPress={onStart}>
-            <Text className="text-primary-foreground font-bold text-base">Start Practising →</Text>
+            <Text className="text-primary-foreground font-bold text-base">{t('session.startPractising')}</Text>
           </TouchableOpacity>
         )}
       </View>

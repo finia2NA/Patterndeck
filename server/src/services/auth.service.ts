@@ -8,6 +8,16 @@ import { sendPasswordResetEmail } from './email.service.js';
 
 const JWT_EXPIRY = '7d';
 
+function normalizeUiLanguage(value: string | undefined): 'en' | 'de' | null {
+  return value === 'en' || value === 'de' ? value : null;
+}
+
+async function createUiLanguageSetting(userId: string, uiLanguage?: string) {
+  const value = normalizeUiLanguage(uiLanguage);
+  if (!value) return;
+  await prisma.setting.create({ data: { userId, key: 'ui_language', value } });
+}
+
 export function signToken(userId: string): string {
   return jwt.sign({ userId }, config.jwtSecret, { expiresIn: JWT_EXPIRY });
 }
@@ -20,14 +30,13 @@ export function verifyToken(token: string): { userId: string } {
   }
 }
 
-export async function register(email: string, password: string) {
+export async function register(email: string, password: string, uiLanguage?: string) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw new AppError(409, 'EMAIL_EXISTS', 'An account with this email already exists.');
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await prisma.user.create({
-    data: { email, passwordHash },
-  });
+  const user = await prisma.user.create({ data: { email, passwordHash } });
+  await createUiLanguageSetting(user.id, uiLanguage);
 
   return { token: signToken(user.id), user: { id: user.id, email: user.email } };
 }
@@ -44,7 +53,7 @@ export async function login(email: string, password: string) {
   return { token: signToken(user.id), user: { id: user.id, email: user.email } };
 }
 
-export async function findOrCreateByApple(appleId: string, email: string | null) {
+export async function findOrCreateByApple(appleId: string, email: string | null, uiLanguage?: string) {
   // Try to find by appleId first
   let user = await prisma.user.findUnique({ where: { appleId } });
   if (user) return { token: signToken(user.id), user: { id: user.id, email: user.email } };
@@ -60,10 +69,11 @@ export async function findOrCreateByApple(appleId: string, email: string | null)
 
   // Create new user
   user = await prisma.user.create({ data: { appleId, email } });
+  await createUiLanguageSetting(user.id, uiLanguage);
   return { token: signToken(user.id), user: { id: user.id, email: user.email } };
 }
 
-export async function findOrCreateByGoogle(googleId: string, email: string | null) {
+export async function findOrCreateByGoogle(googleId: string, email: string | null, uiLanguage?: string) {
   let user = await prisma.user.findUnique({ where: { googleId } });
   if (user) return { token: signToken(user.id), user: { id: user.id, email: user.email } };
 
@@ -76,6 +86,7 @@ export async function findOrCreateByGoogle(googleId: string, email: string | nul
   }
 
   user = await prisma.user.create({ data: { googleId, email } });
+  await createUiLanguageSetting(user.id, uiLanguage);
   return { token: signToken(user.id), user: { id: user.id, email: user.email } };
 }
 

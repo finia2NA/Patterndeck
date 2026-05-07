@@ -1,5 +1,6 @@
 import { View, Text, TextInput } from 'react-native';
 import { useColors } from '@/constants/theme';
+import { useI18n } from '@/lib/i18n';
 
 export interface ForgotPasswordCardProps {
   email: string;
@@ -11,20 +12,21 @@ export interface ForgotPasswordCardProps {
 
 export function ForgotPasswordCard({ email, onEmailChange, error, loading, sent }: ForgotPasswordCardProps) {
   const colors = useColors();
+  const { t } = useI18n();
 
   return (
     <>
-      <Text className="text-3xl font-bold text-foreground mb-2">Reset password</Text>
+      <Text className="text-3xl font-bold text-foreground mb-2">{t('onboarding.resetPassword')}</Text>
       {sent ? (
         <Text className="text-foreground-secondary text-sm leading-6">
-          If an account with that email exists, we&apos;ve sent a reset link. Check your inbox.
+          {t('onboarding.resetPasswordSent')}
         </Text>
       ) : (
         <>
           <Text className="text-foreground-secondary text-sm leading-6 mb-6">
-            Enter your email and we&apos;ll send you a link to reset your password.
+            {t('onboarding.resetPasswordBody')}
           </Text>
-          <Text className="text-foreground/80 text-sm font-medium mb-2">Email</Text>
+          <Text className="text-foreground/80 text-sm font-medium mb-2">{t('onboarding.email')}</Text>
           <View className="p-1">
             <TextInput
               className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm"

@@ -1,6 +1,7 @@
 import { View, Text, TextInput } from 'react-native';
 import { useColors } from '@/constants/theme';
 import { TouchTarget } from '@/components/TouchTarget';
+import { useI18n } from '@/lib/i18n';
 
 export interface ApiKeyCardProps {
   apiKey: string;
@@ -13,17 +14,17 @@ export interface ApiKeyCardProps {
 
 export function ApiKeyCard({ apiKey, onApiKeyChange, error, loading, canSkip, onSkip }: ApiKeyCardProps) {
   const colors = useColors();
+  const { t } = useI18n();
   return (
     <>
       <Text className="text-3xl font-bold text-foreground mb-2">
-        Connect your Claude API key
+        {t('onboarding.apiKeyTitle')}
       </Text>
       <Text className="text-foreground-secondary text-sm leading-6 mb-6">
-        PatternDeck uses Claude to generate study content and grade your
-        answers. Your key is stored securely on the server — it is only used to authenticate with Anthropic.
+        {t('onboarding.apiKeyBody')}
       </Text>
       <Text className="text-foreground/80 text-sm font-medium mb-2">
-        Anthropic API Key
+        {t('onboarding.apiKeyLabel')}
       </Text>
       <View className="p-1">
         <TextInput
@@ -42,13 +43,12 @@ export function ApiKeyCard({ apiKey, onApiKeyChange, error, loading, canSkip, on
         <Text className="text-error text-xs mt-2">{error}</Text>
       )}
       <Text className="text-foreground-secondary/70 text-xs mt-3 leading-5">
-        Get a key at console.anthropic.com. Usage costs apply based on your
-        Anthropic account.
+        {t('onboarding.apiKeyHelp')}
       </Text>
       {canSkip && (
         <TouchTarget onPress={onSkip!} style={{ marginTop: 8, paddingHorizontal: 0 }}>
           <Text className="text-primary text-sm">
-            Skip — use the server&apos;s key instead
+            {t('onboarding.skipServerKey')}
           </Text>
         </TouchTarget>
       )}

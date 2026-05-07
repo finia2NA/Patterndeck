@@ -14,6 +14,7 @@ import {
   setLocalSetting,
   type SettingsMap,
 } from '@/hooks/state/persistent/settingsStore';
+import { getAiResponseLanguage, getCurrentUiLocale } from '@/lib/i18n';
 
 const ANDROID_EMULATOR_HOST = '10.0.2.2';
 const LOCALHOST_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', '[::1]']);
@@ -138,7 +139,7 @@ export async function hydrateSettings(): Promise<SettingsMap> {
 export async function register(email: string, password: string) {
   return request<{ token: string; user: { id: string; email: string | null } }>('/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, uiLanguage: getCurrentUiLocale() }),
   });
 }
 
@@ -173,14 +174,14 @@ export async function resetPassword(token: string, newPassword: string) {
 export async function loginWithApple(identityToken: string) {
   return request<{ token: string; user: { id: string; email: string | null } }>('/auth/apple', {
     method: 'POST',
-    body: JSON.stringify({ identityToken }),
+    body: JSON.stringify({ identityToken, uiLanguage: getCurrentUiLocale() }),
   });
 }
 
 export async function loginWithGoogle(idToken: string) {
   return request<{ token: string; user: { id: string; email: string | null } }>('/auth/google', {
     method: 'POST',
-    body: JSON.stringify({ idToken }),
+    body: JSON.stringify({ idToken, uiLanguage: getCurrentUiLocale() }),
   });
 }
 
@@ -455,14 +456,14 @@ export async function unregisterPushDevice(expoPushToken?: string) {
 export async function generateCards(topic: string, language: string, count: number, explanation: string, analyticsContext?: AnalyticsContext) {
   return request<{ cards: Card[]; cost: number }>('/ai/cards', {
     method: 'POST',
-    body: JSON.stringify({ topic, language, count, explanation, analyticsContext }),
+    body: JSON.stringify({ topic, language, count, explanation, analyticsContext, uiLanguage: getAiResponseLanguage() }),
   });
 }
 
 export async function judgeAnswer(card: Card, userAnswer: string, language: string, explanation?: string, brevity?: 'brief' | 'normal', analyticsContext?: AnalyticsContext) {
   return request<{ correct: boolean; reason: string; cost: number }>('/ai/judge', {
     method: 'POST',
-    body: JSON.stringify({ card, userAnswer, language, explanation, brevity, analyticsContext }),
+    body: JSON.stringify({ card, userAnswer, language, explanation, brevity, analyticsContext, uiLanguage: getAiResponseLanguage() }),
   });
 }
 
@@ -474,7 +475,7 @@ export async function rateSession(topic: string, language: string, cards: CardAt
   }));
   return request<{ stars: number; recap: string; cost: number }>('/ai/rate-session', {
     method: 'POST',
-    body: JSON.stringify({ topic, language, cards: payload, analyticsContext }),
+    body: JSON.stringify({ topic, language, cards: payload, analyticsContext, uiLanguage: getAiResponseLanguage() }),
   });
 }
 
@@ -621,21 +622,21 @@ export async function generateExplanation(
   onCost?: (usd: number) => void,
   analyticsContext?: AnalyticsContext,
 ): Promise<{ wasTruncated: boolean }> {
-  const result = await streamSSE('/ai/explanation/stream', { topic, language, analyticsContext }, onChunk, onCost);
+  const result = await streamSSE('/ai/explanation/stream', { topic, language, analyticsContext, uiLanguage: getAiResponseLanguage() }, onChunk, onCost);
   return { wasTruncated: result.wasTruncated ?? false };
 }
 
 export async function explainRejection(card: Card, userAnswer: string, language: string, explanation?: string, brevity?: 'brief' | 'normal', analyticsContext?: AnalyticsContext) {
   return request<{ explanation: string; overrideToCorrect: boolean; cost: number }>('/ai/rejection', {
     method: 'POST',
-    body: JSON.stringify({ card, userAnswer, language, explanation, brevity, analyticsContext }),
+    body: JSON.stringify({ card, userAnswer, language, explanation, brevity, analyticsContext, uiLanguage: getAiResponseLanguage() }),
   });
 }
 
 export async function explainSentence(card: Card, language: string, explanation?: string, analyticsContext?: AnalyticsContext) {
   return request<{ explanation: string; cost: number }>('/ai/explain-sentence', {
     method: 'POST',
-    body: JSON.stringify({ card, language, explanation, analyticsContext }),
+    body: JSON.stringify({ card, language, explanation, analyticsContext, uiLanguage: getAiResponseLanguage() }),
   });
 }
 
@@ -648,7 +649,7 @@ export async function wordHint(
 ): Promise<WordHint & { cost: number }> {
   return request('/ai/word-hint', {
     method: 'POST',
-    body: JSON.stringify({ word, english, targetLanguage, language, analyticsContext }),
+    body: JSON.stringify({ word, english, targetLanguage, language, analyticsContext, uiLanguage: getAiResponseLanguage() }),
   });
 }
 
@@ -663,5 +664,5 @@ export async function chatAboutCard(
   explanation?: string,
   analyticsContext?: AnalyticsContext,
 ): Promise<void> {
-  await streamSSE('/ai/chat/stream', { card, userAnswer, language, wasCorrect, messages, explanation, analyticsContext }, onChunk, onCost);
+  await streamSSE('/ai/chat/stream', { card, userAnswer, language, wasCorrect, messages, explanation, analyticsContext, uiLanguage: getAiResponseLanguage() }, onChunk, onCost);
 }

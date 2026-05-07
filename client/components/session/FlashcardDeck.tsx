@@ -12,22 +12,25 @@ import { GrammarMarkdown } from './GrammarMarkdown';
 import { CardChat } from './CardChat';
 import { ClickableEnglishSentence } from './ClickableEnglishSentence';
 import { TouchTarget } from '@/components/TouchTarget';
+import { useI18n } from '@/lib/i18n';
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
 function AnswerBox({ answer }: { answer: string }) {
+  const { t } = useI18n();
   return (
     <View className="bg-background-muted rounded-lg px-3 py-2 gap-1">
-      <Text className="text-foreground-secondary text-xs">Your answer</Text>
+      <Text className="text-foreground-secondary text-xs">{t('session.yourAnswer')}</Text>
       <Text className="text-foreground/70 text-sm">{answer}</Text>
     </View>
   );
 }
 
 function ExampleBox({ example }: { example: string }) {
+  const { t } = useI18n();
   return (
     <View className="bg-background-warm rounded-lg px-3 py-2 gap-1">
-      <Text className="text-foreground-secondary text-xs">My example sentence</Text>
+      <Text className="text-foreground-secondary text-xs">{t('session.exampleSentence')}</Text>
       <Text className="text-foreground text-base font-medium">{example}</Text>
     </View>
   );
@@ -73,6 +76,7 @@ export function FlashcardDeck({
   hintCache, addCost, vocabHintDismissSignal, analyticsContext, onWordHint,
 }: FlashcardDeckProps) {
   const colors = useColors();
+  const { t } = useI18n();
   const currentCard = cards[0] ?? { english: '', targetLanguage: '', hint: '', sentenceContext: '' };
 
   return (
@@ -80,7 +84,7 @@ export function FlashcardDeck({
       {/* Card */}
       <View className="w-full max-w-xl bg-surface rounded-3xl p-8 mb-6">
         <View className="flex-row justify-between items-center mb-3">
-          <Text className="text-foreground-secondary text-xs uppercase tracking-widest">Translate to {language}</Text>
+          <Text className="text-foreground-secondary text-xs uppercase tracking-widest">{t('session.translateTo', { language })}</Text>
           {deckName ? <Text className="text-foreground-secondary text-xs">{deckName}</Text> : null}
         </View>
         <View className="mb-2">
@@ -106,7 +110,7 @@ export function FlashcardDeck({
             <TextInput
               ref={inputRef}
               className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-base mb-4"
-              placeholder="Your translation…"
+              placeholder={t('session.translationPlaceholder')}
               placeholderTextColor={colors.foreground_muted}
               value={answer}
               onChangeText={onChangeAnswer}
@@ -124,7 +128,7 @@ export function FlashcardDeck({
               {cardPhase === 'judging' ? (
                 <ActivityIndicator color={colors.foreground} />
               ) : (
-                <Text className="text-primary-foreground font-semibold">Check answer</Text>
+                <Text className="text-primary-foreground font-semibold">{t('session.checkAnswer')}</Text>
               )}
             </TouchableOpacity>
 
@@ -136,7 +140,7 @@ export function FlashcardDeck({
                 </View>
               ) : (
                 <TouchTarget onPress={onToggleHint} style={{ alignSelf: 'center' }}>
-                  <Text className="text-foreground-secondary/50 text-xs text-center">Show hint</Text>
+                  <Text className="text-foreground-secondary/50 text-xs text-center">{t('session.showHint')}</Text>
                 </TouchTarget>
               )
             )}
@@ -148,7 +152,7 @@ export function FlashcardDeck({
           <View className="gap-3">
             <View className="flex-row items-center gap-2 mb-1">
               <Text className="text-success text-lg">✓</Text>
-              <Text className="text-success font-semibold">Correct!</Text>
+              <Text className="text-success font-semibold">{t('session.correct')}</Text>
             </View>
             <AnswerBox answer={submittedAnswer} />
             <GrammarMarkdown>{feedback}</GrammarMarkdown>
@@ -157,7 +161,7 @@ export function FlashcardDeck({
               className="bg-success rounded-xl py-3.5 items-center mt-2"
               onPress={onConfirmCorrect}
             >
-              <Text className="text-primary-foreground font-semibold">Next card →</Text>
+              <Text className="text-primary-foreground font-semibold">{t('session.nextCard')}</Text>
             </TouchableOpacity>
             <CardChat messages={chatMessages} streaming={chatStreaming} onSend={onChatSend} />
           </View>
@@ -167,7 +171,7 @@ export function FlashcardDeck({
         {cardPhase === 'wrong_explaining' && (
           <View className="items-center gap-3 py-2">
             <ActivityIndicator color={colors.error} />
-            <Text className="text-foreground-secondary text-sm">Getting feedback…</Text>
+            <Text className="text-foreground-secondary text-sm">{t('session.gettingFeedback')}</Text>
           </View>
         )}
 
@@ -178,12 +182,12 @@ export function FlashcardDeck({
               {wasSkipped ? (
                 <>
                   <Text className="text-foreground-secondary text-lg">→</Text>
-                  <Text className="text-foreground-secondary font-semibold">Here is the answer</Text>
+                  <Text className="text-foreground-secondary font-semibold">{t('session.hereIsAnswer')}</Text>
                 </>
               ) : (
                 <>
                   <Text className="text-error text-lg">✗</Text>
-                  <Text className="text-error font-semibold">Not quite</Text>
+                  <Text className="text-error font-semibold">{t('session.notQuite')}</Text>
                 </>
               )}
             </View>
@@ -194,11 +198,11 @@ export function FlashcardDeck({
               className="bg-primary rounded-xl py-3.5 items-center mt-2"
               onPress={onConfirmWrong}
             >
-              <Text className="text-primary-foreground font-semibold">Try again later →</Text>
+              <Text className="text-primary-foreground font-semibold">{t('session.tryAgainLater')}</Text>
             </TouchableOpacity>
             {!wasSkipped && (
               <TouchTarget onPress={onOverrideWrong} style={{ alignSelf: 'flex-end' }}>
-                <Text className="text-secondary text-xs">Override to correct</Text>
+                <Text className="text-secondary text-xs">{t('session.overrideCorrect')}</Text>
               </TouchTarget>
             )}
             <CardChat messages={chatMessages} streaming={chatStreaming} onSend={onChatSend} />

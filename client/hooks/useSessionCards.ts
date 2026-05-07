@@ -3,6 +3,7 @@ import { TextInput, Platform } from 'react-native';
 import { judgeAnswer, explainRejection, explainSentence, chatAboutCard, getSetting, getUsageStatus } from '@/lib/api';
 import { DID_NOT_KNOW_ANSWER, type AnalyticsContext, type Card, type CardPhase, type DeckCard, type ChatMessage, type CardAttempt, type WordHint } from '@/lib/types';
 import { analytics } from '@/lib/analytics';
+import { useI18n } from '@/lib/i18n';
 
 interface UseSessionCardsParams {
   cards: (Card | DeckCard)[];
@@ -19,6 +20,7 @@ interface UseSessionCardsParams {
 export function useSessionCards({
   cards, setCards, language, explanation, addCost, setLoadError, showOverlay, analyticsContext, deckInfoById,
 }: UseSessionCardsParams) {
+  const { t } = useI18n();
   const [cardPhase, setCardPhase] = useState<CardPhase>('input');
   const [answer, setAnswer] = useState('');
   const [submittedAnswer, setSubmittedAnswer] = useState('');
@@ -92,7 +94,7 @@ export function useSessionCards({
         setWrongExplanation(result.explanation);
         setCardPhase('wrong_shown');
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : 'API error.');
+        setLoadError(e instanceof Error ? e.message : t('common.apiError'));
         setCardPhase('input');
       }
       return;
@@ -128,7 +130,7 @@ export function useSessionCards({
         }
       }
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'API error.');
+      setLoadError(e instanceof Error ? e.message : t('common.apiError'));
       setCardPhase('input');
     }
   }
@@ -291,7 +293,7 @@ export function useSessionCards({
         const updated = [...prev];
         updated[updated.length - 1] = {
           role: 'assistant',
-          content: 'Sorry, something went wrong. Please try again.',
+          content: t('common.errorGeneric'),
         };
         return updated;
       });
