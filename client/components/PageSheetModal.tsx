@@ -219,6 +219,10 @@ export function PageSheetModal({
     </PageSheetScrollContext.Provider>
   );
 
+  const headerPaddingTop = Platform.OS === 'android'
+    ? insets.top + 8
+    : Math.min(insets.top, 12) + 8;
+
   // Native: delegate presentation entirely to iOS/Android — swipe-to-dismiss and
   // resize behaviour are handled by the platform.
   if (Platform.OS !== 'web') {
@@ -231,7 +235,7 @@ export function PageSheetModal({
         onRequestClose={handleCancel}
       >
         <View style={[styles.container, themeVars]} className="bg-background">
-          {makeHeader(Math.min(insets.top, 12) + 8)}
+          {makeHeader(headerPaddingTop)}
           {scrollView(insets.bottom + 24)}
         </View>
       </Modal>
