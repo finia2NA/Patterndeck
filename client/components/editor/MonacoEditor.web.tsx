@@ -97,12 +97,15 @@ export function MonacoEditor({ value, onChange, readOnly, externalRevision = 0, 
     });
   };
 
+  const editorKey = colorScheme;
+
   if (showDiff && original !== undefined) {
     return (
       <DiffEditor
+        key={editorKey}
         height="100%"
         language="markdown"
-        theme={colorScheme === 'dark' ? 'vs-dark' : 'light'}
+        theme={colorScheme === 'dark' ? 'vs-dark' : 'vs'}
         original={original}
         modified={pinnedModified}
         onMount={handleDiffMount}
@@ -113,6 +116,19 @@ export function MonacoEditor({ value, onChange, readOnly, externalRevision = 0, 
         }}
       />
     );
+  }
+
+  return (
+    <MonacoReact
+      key={editorKey}
+      height="100%"
+      language="markdown"
+      theme={colorScheme === 'dark' ? 'vs-dark' : 'vs'}
+      defaultValue={value}
+      onMount={handleMount}
+      options={commonOptions}
+    />
+  );
   }
 
   return (
