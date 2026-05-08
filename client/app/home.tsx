@@ -389,12 +389,13 @@ export default function Home() {
             />
           </View>
           <TouchableOpacity
-            className={`py-3 rounded-2xl items-center bg-primary`}
+            className={`py-3 rounded-2xl items-center border ${canStart ? 'bg-primary border-primary' : 'bg-background-muted border-border'}`}
             onPress={handleQuickStart}
             disabled={!canStart}
-            activeOpacity={0.85}
+            activeOpacity={canStart ? 0.85 : 1}
+            accessibilityState={{ disabled: !canStart }}
           >
-            <Text className={`text-base font-semibold text-primary-foreground`}>
+            <Text className={`text-base font-semibold ${canStart ? 'text-primary-foreground' : 'text-foreground-muted'}`}>
               {t('home.startSession')}
             </Text>
           </TouchableOpacity>
