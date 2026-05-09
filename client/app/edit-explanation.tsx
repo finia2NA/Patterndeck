@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useColors } from '@/constants/theme';
@@ -11,6 +11,8 @@ import { MonacoEditor } from '@/components/editor/MonacoEditor';
 import { ExplanationChat } from '@/components/editor/ExplanationChat';
 import { ResizablePanels } from '@/components/editor/ResizablePanels';
 import { GrammarMarkdown } from '@/components/session/GrammarMarkdown';
+import { useTutorial } from '@/hooks/useTutorial';
+import { TutorialOverlay, type TutorialStep } from '@/components/tutorial/TutorialOverlay';
 
 export default function EditExplanationPage() {
   const colors = useColors();
@@ -32,6 +34,17 @@ export default function EditExplanationPage() {
   const [editorRevision, setEditorRevision] = useState(0);
   const [showDiff, setShowDiff] = useState(false);
   const dirty = explanation !== originalExplanation;
+
+  const { visible: tutorialVisible, onDone: onTutorialDone } = useTutorial('editor');
+  const editorPanelRef = useRef<View>(null);
+  const previewPanelRef = useRef<View>(null);
+  const chatPanelRef = useRef<View>(null);
+
+  const editorTutorialSteps: TutorialStep[] = [
+    { ref: editorPanelRef, title: t('tutorial.editor.monaco.title'), body: t('tutorial.editor.monaco.body') },
+    { ref: previewPanelRef, title: t('tutorial.editor.preview.title'), body: t('tutorial.editor.preview.body') },
+    { ref: chatPanelRef, title: t('tutorial.editor.chat.title'), body: t('tutorial.editor.chat.body') },
+  ];
 
   useEffect(() => {
     if (!nodeId) return;
@@ -174,7 +187,7 @@ export default function EditExplanationPage() {
       {/* Three-panel editor */}
       <ResizablePanels>
         {[
-          <View key="monaco" className="flex-1 relative">
+          <View key="monaco" ref={editorPanelRef} style={{ flex: 1, position: 'relative' }}>
             {!loading && (
               <MonacoEditor
                 value={explanation}
@@ -198,32 +211,35 @@ export default function EditExplanationPage() {
               </TouchableOpacity>
             )}
           </View>,
-          <ScrollView
-            key="preview"
-            className="flex-1"
-            contentContainerStyle={{ padding: 24 }}
-          >
-            {explanation ? (
-              <GrammarMarkdown>{explanation}</GrammarMarkdown>
-            ) : (
-              <Text className="text-foreground-secondary text-sm italic">
-                {t('deck.generatedExplanationPlaceholder')}
-              </Text>
-            )}
-          </ScrollView>,
-          <ExplanationChat
-            key="chat"
-            explanation={explanation}
-            onExplanationChange={handleExternalExplanationChange}
-            onGeneratingChange={setAiGenerating}
-            onCostChange={(cost) => setTotalCost(c => c + cost)}
-            nodeId={nodeId}
-            deckTopic={deckTopic}
-            language={language}
-            disabled={loading}
-          />,
+          <View key="preview" ref={previewPanelRef} style={{ flex: 1 }}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ padding: 24 }}
+            >
+              {explanation ? (
+                <GrammarMarkdown>{explanation}</GrammarMarkdown>
+              ) : (
+                <Text className="text-foreground-secondary text-sm italic">
+                  {t('deck.generatedExplanationPlaceholder')}
+                </Text>
+              )}
+            </ScrollView>
+          </View>,
+          <View key="chat" ref={chatPanelRef} style={{ flex: 1 }}>
+            <ExplanationChat
+              explanation={explanation}
+              onExplanationChange={handleExternalExplanationChange}
+              onGeneratingChange={setAiGenerating}
+              onCostChange={(cost) => setTotalCost(c => c + cost)}
+              nodeId={nodeId}
+              deckTopic={deckTopic}
+              language={language}
+              disabled={loading}
+            />
+          </View>,
         ]}
       </ResizablePanels>
+      <TutorialOverlay steps={editorTutorialSteps} visible={isLargeScreen && tutorialVisible} onDone={onTutorialDone} />
     </View>
   );
 }

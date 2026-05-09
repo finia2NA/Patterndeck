@@ -15,6 +15,7 @@ import { useColors } from '@/constants/theme';
 import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
 import { clearAuthToken, clearUserEmail, clearUserId, clearUserRole, getUserEmail, getUserId, getUserRole } from '@/lib/storage';
 import { deleteApiKey, getUsageStatus, hydrateSettings, parseEnabledLanguages, saveSettings } from '@/lib/api';
+import { resetAllTutorials } from '@/hooks/useTutorial';
 import type { UsageStatus } from '@/lib/api';
 import { getSettingsSnapshot, resetLocalSettings } from '@/hooks/state/persistent/settingsStore';
 import { PillDropdown } from '@/components/PillDropdown';
@@ -368,6 +369,9 @@ export function SettingsModal({ visible, onClose }: SettingsModalProps) {
               <Text className="text-foreground font-semibold">{t('settings.adminPanel')}</Text>
             </TouchableOpacity>
           )}
+          <View className="mb-4">
+            <ConfirmButton label={t('settings.resetTutorial')} confirmLabel={t('settings.resetTutorialConfirm')} onConfirm={() => { onClose(); setTimeout(resetAllTutorials, 500); }} />
+          </View>
           <View className="mb-4">
             <ConfirmButton label={t('settings.logout')} confirmLabel={t('settings.logoutConfirm')} onConfirm={handleLogout} destructive />
           </View>

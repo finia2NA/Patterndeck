@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useRouter, useIsFocused } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +28,8 @@ import type { TreeNode } from '@/lib/types';
 import { useEnabledLanguages } from '@/hooks/state/persistent/useSettings';
 import { getLocalSetting } from '@/hooks/state/persistent/settingsStore';
 import { formatUnitCount, useI18n } from '@/lib/i18n';
+import { useTutorial } from '@/hooks/useTutorial';
+import { TutorialOverlay, type TutorialStep } from '@/components/tutorial/TutorialOverlay';
 
 export default function Home() {
   const router = useRouter();
@@ -40,6 +42,38 @@ export default function Home() {
   const { tree, loading, refreshing, newDecksStartedToday, refresh } = useDeckTree(isFocused);
   const enabledLanguages = useEnabledLanguages(DEFAULT_LANGUAGES);
   const newDecksPerDayLimit = parseInt(getLocalSetting('new_decks_per_day') ?? '1', 10) || 1;
+
+  // Tutorial
+  const { visible: tutorialVisible, onDone: onTutorialDone } = useTutorial('home');
+  const quickStudyRef = useRef<View>(null);
+  const newDeckRef = useRef<View>(null);
+  const deckTreeRef = useRef<View>(null);
+  const settingsRef = useRef<View>(null);
+  const tutorialRowRef = useRef<View>(null);
+  const tutorialActionsRef = useRef<View>(null);
+
+  const tutorialFakeDeck: TreeNode = useMemo(() => ({
+    id: '__tutorial__',
+    parentId: null,
+    name: t('tutorial.home.fakeDeckName'),
+    sortOrder: -1,
+    createdAt: 0,
+    updatedAt: 0,
+    children: [],
+    deck: {
+      nodeId: '__tutorial__',
+      topic: 'Example grammar topic',
+      clarification: null,
+      language: 'Japanese',
+      explanation: null,
+      explanationStatus: 'ready',
+      grammarCaseStatus: 'ready',
+      cardCount: 5,
+      lastStudiedAt: null,
+      dueAt: null,
+      isDue: false,
+    },
+  }), [t]);
 
   // Quick-study state
   const [topic, setTopic] = useState('');
@@ -91,6 +125,7 @@ export default function Home() {
   }
 
   const handleStudy = useCallback(async (node: TreeNode) => {
+    if (node.id === '__tutorial__') return;
     const startStudy = (params: { nodeId: string; studyMode: 'scheduled' | 'early'; deckIds?: string[] }) => {
       router.push({
         pathname: '/session',
@@ -158,6 +193,7 @@ export default function Home() {
   }, [newDecksStartedToday, router]);
 
   const handleEdit = useCallback((node: TreeNode) => {
+    if (node.id === '__tutorial__') return;
     setEditNode(node);
     setEditNodePathStr(node.name);
     setDeckModalVisible(true);
@@ -168,12 +204,14 @@ export default function Home() {
   }, []);
 
   const handleHistory = useCallback((node: TreeNode) => {
+    if (node.id === '__tutorial__') return;
     setHistoryNode(node);
     setHistoryShowActions(false);
     setHistoryStudyContext(null);
   }, []);
 
   const handleView = useCallback((node: TreeNode) => {
+    if (node.id === '__tutorial__') return;
     if (!isDeckReadyForStudy(node.deck)) return;
     router.push({
       pathname: '/session',
@@ -275,7 +313,20 @@ export default function Home() {
     refresh();
   }, [editNode, refresh]);
 
+  // ─── Tutorial steps ─────────────────────────────────────────────────
+
+  const tutorialSteps: TutorialStep[] = [
+    { ref: quickStudyRef, title: t('tutorial.home.quickStudy.title'), body: t('tutorial.home.quickStudy.body') },
+    { ref: newDeckRef, title: t('tutorial.home.newDeck.title'), body: t('tutorial.home.newDeck.body') },
+    { ref: tutorialRowRef, title: t('tutorial.home.deckRow.title'), body: t('tutorial.home.deckRow.body') },
+    { ref: tutorialActionsRef, title: t('tutorial.home.deckButtons.title'), body: t('tutorial.home.deckButtons.body') },
+    { ref: deckTreeRef, title: t('tutorial.home.deckTree.title'), body: t('tutorial.home.deckTree.body') },
+    { ref: settingsRef, title: t('tutorial.home.settings.title'), body: t('tutorial.home.settings.body') },
+  ];
+
   // ─── Render ─────────────────────────────────────────────────────────
+
+  const displayTree = tutorialVisible ? [tutorialFakeDeck, ...tree] : tree;
 
   return (
     <View className="flex-1 bg-background">
@@ -290,6 +341,7 @@ export default function Home() {
         {/* Header */}
         <View className="flex-row items-center justify-between mb-6">
           <BrandLogo size={34} wordmarkSize={20} />
+          <View ref={settingsRef}>
           <PlatformButton
             icon="settings"
             onPress={() => setSettingsVisible(true)}
@@ -309,10 +361,12 @@ export default function Home() {
               justifyContent: 'center',
             }}
           />
+          </View>
         </View>
 
         {/* Deck tree */}
         <View
+          ref={deckTreeRef}
           className="w-full max-w-2xl self-center mb-6 bg-surface rounded-2xl border border-border"
           style={{
             padding: 20,
@@ -323,13 +377,15 @@ export default function Home() {
             <View className="flex-row items-center justify-between mb-3">
               <Text className="text-foreground-secondary text-sm font-semibold">{t('home.decks')}</Text>
               <View className="flex-row items-center">
-                <TouchableOpacity
-                  className="px-4 py-2 rounded-xl bg-primary"
-                  onPress={handleCreate}
-                  activeOpacity={0.85}
-                >
-                  <Text className="text-primary-foreground text-sm font-semibold">{t('home.newDeck')}</Text>
-                </TouchableOpacity>
+                <View ref={newDeckRef}>
+                  <TouchableOpacity
+                    className="px-4 py-2 rounded-xl bg-primary"
+                    onPress={handleCreate}
+                    activeOpacity={0.85}
+                  >
+                    <Text className="text-primary-foreground text-sm font-semibold">{t('home.newDeck')}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           )}
@@ -344,13 +400,21 @@ export default function Home() {
                   <Text className="text-foreground-muted text-xs">{t('common.updating')}</Text>
                 </View>
               )}
-              <DeckTree tree={tree} onStudy={handleStudy} onEdit={handleEdit} onHistory={handleHistory} onView={handleView} />
+              <DeckTree
+                tree={displayTree}
+                onStudy={handleStudy}
+                onEdit={handleEdit}
+                onHistory={handleHistory}
+                onView={handleView}
+                tutorialRowRef={tutorialRowRef}
+                tutorialActionsRef={tutorialActionsRef}
+              />
             </>
           )}
         </View>
 
         {/* Quick study */}
-        <View className="w-full max-w-2xl self-center mb-6">
+        <View ref={quickStudyRef} className="w-full max-w-2xl self-center mb-6">
           <View
             className={`bg-surface rounded-2xl mb-3 border ${inputFocused ? 'border-primary' : 'border-border'}`}
             style={{
@@ -408,6 +472,7 @@ export default function Home() {
       {/* Mobile FABs */}
       {isSmallScreen && (
         <View
+          ref={newDeckRef}
           className="absolute items-center"
           style={{
             width: 56,
@@ -461,6 +526,12 @@ export default function Home() {
             : undefined
         }
         newDeckLimitReached={newDecksStartedToday >= newDecksPerDayLimit}
+      />
+      <TutorialOverlay
+        steps={tutorialSteps}
+        visible={tutorialVisible}
+        onDone={onTutorialDone}
+        intro={{ title: t('tutorial.welcome.title'), body: t('tutorial.welcome.body'), startLabel: t('tutorial.welcome.start') }}
       />
     </View>
   );

@@ -14,6 +14,7 @@ client/
 │   ├── home.tsx                ← Main screen: deck tree, quick study input, modals
 │   ├── session.tsx             ← Study session: card loop, explanation overlay, chat, SRS rating
 │   ├── edit-explanation.tsx    ← Dedicated Markdown editor: Monaco + live preview + AI chat (web large-screen only)
+│   ├── manual.tsx              ← Static manual / help page (no auth required)
 │   └── reset-password.tsx      ← Password reset flow (token from email link)
 │
 ├── components/
@@ -58,6 +59,9 @@ client/
 │   │   ├── ResizeHandle.tsx                ← Draggable vertical divider (web pointer events + native PanResponder)
 │   │   └── ResizablePanels.tsx             ← N-panel flex layout with draggable dividers between each pair
 │   │
+│   ├── tutorial/
+│   │   └── TutorialOverlay.tsx             ← Step-by-step tutorial overlay: highlights target elements, floating card with back/next/skip
+│   │
 │   ├── onboarding/
 │   │   ├── AccountCard.tsx                 ← Account creation step (email/password or OAuth)
 │   │   ├── ApiKeyCard.tsx                  ← API key entry + validation step
@@ -98,6 +102,7 @@ client/
 │   ├── useRequireAdmin.ts      ← Redirects non-admin users and gates admin-only UI rendering
 │   ├── use-color-scheme.ts / .web.ts ← Platform-specific color scheme detection
 │   ├── use-theme-color.ts      ← Resolves a theme token to a concrete color value
+│   ├── useTutorial.ts          ← Returns tutorial visible state + onDone; persists completion in AsyncStorage
 │   └── state/
 │       └── persistent/
 │           ├── useSettings.ts  ← Hook for reading/writing persisted user settings

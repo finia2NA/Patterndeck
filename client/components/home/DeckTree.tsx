@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import type { TreeNode } from '@/lib/types';
 import { AnimatedCollapsible } from '@/components/AnimatedCollapsible';
@@ -14,9 +14,11 @@ interface DeckTreeProps {
   onEdit: (node: TreeNode) => void;
   onHistory: (node: TreeNode) => void;
   onView: (node: TreeNode) => void;
+  tutorialRowRef?: React.RefObject<View | null>;
+  tutorialActionsRef?: React.RefObject<View | null>;
 }
 
-export function DeckTree({ tree, onStudy, onEdit, onHistory, onView }: DeckTreeProps) {
+export function DeckTree({ tree, onStudy, onEdit, onHistory, onView, tutorialRowRef, tutorialActionsRef }: DeckTreeProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
 
@@ -65,6 +67,8 @@ export function DeckTree({ tree, onStudy, onEdit, onHistory, onView }: DeckTreeP
           onEdit={onEdit}
           onHistory={onHistory}
           onView={onView}
+          tutorialRowRef={tutorialRowRef}
+          tutorialActionsRef={tutorialActionsRef}
         />
       ))}
     </View>
@@ -82,16 +86,18 @@ interface TreeRowProps {
   onEdit: (node: TreeNode) => void;
   onHistory: (node: TreeNode) => void;
   onView: (node: TreeNode) => void;
+  tutorialRowRef?: React.RefObject<View | null>;
+  tutorialActionsRef?: React.RefObject<View | null>;
 }
 
-function TreeRow({ node, depth, collapsedIds, onToggle, onStudy, onEdit, onHistory, onView }: TreeRowProps) {
+function TreeRow({ node, depth, collapsedIds, onToggle, onStudy, onEdit, onHistory, onView, tutorialRowRef, tutorialActionsRef }: TreeRowProps) {
   const isCollection = node.deck === null;
   const expanded = !collapsedIds.has(node.id);
   const colors = useColors();
   const { t } = useI18n();
 
   return (
-    <View>
+    <View ref={node.id === '__tutorial__' ? tutorialRowRef : undefined}>
       <View className="flex-row items-center" style={{ paddingLeft: depth * 20 }}>
         {/* Chevron / bullet */}
         {isCollection ? (
@@ -136,39 +142,41 @@ function TreeRow({ node, depth, collapsedIds, onToggle, onStudy, onEdit, onHisto
           />
         )}
 
-        {/* View button — always in the same position for alignment */}
-        {!isCollection && node.deck?.explanationStatus === 'ready' && node.deck.grammarCaseStatus === 'ready' ? (
+        <View ref={node.id === '__tutorial__' ? tutorialActionsRef : undefined} style={{ flexDirection: 'row' }}>
+          {/* View button — always in the same position for alignment */}
+          {!isCollection && node.deck?.explanationStatus === 'ready' && node.deck.grammarCaseStatus === 'ready' ? (
+            <TouchableOpacity
+              className="w-10 h-10 items-center justify-center"
+              onPress={() => onView(node)}
+              activeOpacity={0.6}
+              accessibilityLabel={t('deck.viewExplanation')}
+              // @ts-ignore — title is valid on web View for hover tooltip
+              title={t('deck.viewExplanation')}
+            >
+              <Icon name="book" size={16} color={colors.foreground_secondary} />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 40 }} />
+          )}
+
+          {/* History button */}
           <TouchableOpacity
             className="w-10 h-10 items-center justify-center"
-            onPress={() => onView(node)}
+            onPress={() => onHistory(node)}
             activeOpacity={0.6}
-            accessibilityLabel={t('deck.viewExplanation')}
-            // @ts-ignore — title is valid on web View for hover tooltip
-            title={t('deck.viewExplanation')}
           >
-            <Icon name="book" size={16} color={colors.foreground_secondary} />
+            <Icon name="clock" size={15} color={colors.foreground_secondary} />
           </TouchableOpacity>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
 
-        {/* History button */}
-        <TouchableOpacity
-          className="w-10 h-10 items-center justify-center"
-          onPress={() => onHistory(node)}
-          activeOpacity={0.6}
-        >
-          <Icon name="clock" size={15} color={colors.foreground_secondary} />
-        </TouchableOpacity>
-
-        {/* Edit button */}
-        <TouchableOpacity
-          className="w-10 h-10 items-center justify-center"
-          onPress={() => onEdit(node)}
-          activeOpacity={0.6}
-        >
-          <Icon name="pencil" size={16} color={colors.foreground_secondary} />
-        </TouchableOpacity>
+          {/* Edit button */}
+          <TouchableOpacity
+            className="w-10 h-10 items-center justify-center"
+            onPress={() => onEdit(node)}
+            activeOpacity={0.6}
+          >
+            <Icon name="pencil" size={16} color={colors.foreground_secondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Children */}
