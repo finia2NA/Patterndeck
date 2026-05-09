@@ -63,37 +63,56 @@ export async function generateCards(
   analyticsContext?: AiAnalyticsContext,
   caseTargets?: GrammarCaseTarget[],
 ) {
-  const { result, cost, model, source, provider } = await callStructuredTool<{ cards: GeneratedCard[] }>(
-    userId, 'cards',
-    CARD_GEN_PROMPT(language, count, responseLanguage),
-    JSON.stringify({
-      topic,
-      studyLanguage: language,
-      responseLanguage,
-      count,
-      explanation,
-      ...(caseTargets && caseTargets.length > 0
-        ? {
-          caseTargets: caseTargets.map(target => ({
-            caseKey: target.caseKey,
-            label: target.label,
-            ruleSummary: target.ruleSummary,
-            generationHint: target.generationHint,
-          })),
-        }
-        : {}),
-    }),
-    caseTargets && caseTargets.length > 0 ? 2400 : 2000,
-    {
-      userId,
-      endpoint: 'cards',
-      context: {
-        ...analyticsContext,
-        deckTopic: analyticsContext?.deckTopic ?? topic,
-        language: analyticsContext?.language ?? language,
-      },
+  const userMessage = JSON.stringify({
+    topic,
+    studyLanguage: language,
+    responseLanguage,
+    count,
+    explanation,
+    ...(caseTargets && caseTargets.length > 0
+      ? {
+        caseTargets: caseTargets.map(target => ({
+          caseKey: target.caseKey,
+          label: target.label,
+          ruleSummary: target.ruleSummary,
+          generationHint: target.generationHint,
+        })),
+      }
+      : {}),
+  });
+  const maxTokens = caseTargets && caseTargets.length > 0 ? 2400 : 2000;
+  const analyticsOpts = {
+    userId,
+    endpoint: 'cards' as const,
+    context: {
+      ...analyticsContext,
+      deckTopic: analyticsContext?.deckTopic ?? topic,
+      language: analyticsContext?.language ?? language,
     },
-  );
+  };
+
+  let result!: { cards: GeneratedCard[] };
+  let totalCost = 0;
+  let model!: string;
+  let provider!: string;
+  for (let attempt = 0; attempt <= 1; attempt++) {
+    const { result: r, cost, model: m, provider: p } = await callStructuredTool<{ cards: GeneratedCard[] }>(
+      userId, 'cards',
+      CARD_GEN_PROMPT(language, count, responseLanguage),
+      userMessage, maxTokens, analyticsOpts,
+    );
+    totalCost += cost;
+    model = m;
+    provider = p;
+    if (Array.isArray(r.cards)) {
+      result = r;
+      break;
+    }
+    if (attempt === 1) {
+      throw new Error(`Invalid AI response: expected cards array, got ${typeof r.cards}`);
+    }
+  }
+
 
   captureAiGeneration(userId, {
     ...analyticsContext,
@@ -155,7 +174,7 @@ export async function generateCards(
     [cards[i], cards[j]] = [cards[j], cards[i]];
   }
 
-  return { cards, cost };
+  return { cards, cost: totalCost };
 }
 
 export async function judgeAnswer(userId: string, card: Card, userAnswer: string, language: string, explanation?: string, brevity: 'brief' | 'normal' = 'normal', responseLanguage = 'English', analyticsContext?: AiAnalyticsContext) {
