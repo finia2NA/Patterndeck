@@ -69,40 +69,51 @@ export async function generateCards(
 ) {
   const { apiKey, source } = await resolveApiKey(userId);
 
-  const { result, cost } = await callTool<{ cards: GeneratedCard[] }>(
-    apiKey, HAIKU,
-    CARD_GEN_PROMPT(language, count, responseLanguage),
-    JSON.stringify({
-      topic,
-      studyLanguage: language,
-      responseLanguage,
-      count,
-      explanation,
-      ...(caseTargets && caseTargets.length > 0
-        ? {
-          caseTargets: caseTargets.map(target => ({
-            caseKey: target.caseKey,
-            label: target.label,
-            ruleSummary: target.ruleSummary,
-            generationHint: target.generationHint,
-          })),
-        }
-        : {}),
-    }),
-    caseTargets && caseTargets.length > 0 ? 2400 : 2000,
-    {
-      userId,
-      source,
-      endpoint: 'cards',
-      context: {
-        ...analyticsContext,
-        deckTopic: analyticsContext?.deckTopic ?? topic,
-        language: analyticsContext?.language ?? language,
-      },
+  const userMessage = JSON.stringify({
+    topic,
+    studyLanguage: language,
+    responseLanguage,
+    count,
+    explanation,
+    ...(caseTargets && caseTargets.length > 0
+      ? {
+        caseTargets: caseTargets.map(target => ({
+          caseKey: target.caseKey,
+          label: target.label,
+          ruleSummary: target.ruleSummary,
+          generationHint: target.generationHint,
+        })),
+      }
+      : {}),
+  });
+  const maxTokens = caseTargets && caseTargets.length > 0 ? 2400 : 2000;
+  const analyticsOpts = {
+    userId,
+    source,
+    endpoint: 'cards',
+    context: {
+      ...analyticsContext,
+      deckTopic: analyticsContext?.deckTopic ?? topic,
+      language: analyticsContext?.language ?? language,
     },
-  );
+  };
 
-  await recordUsage(userId, source, 'cards', HAIKU, cost);
+  let result!: { cards: GeneratedCard[] };
+  let totalCost = 0;
+  for (let attempt = 0; attempt <= 1; attempt++) {
+    const { result: r, cost } = await callTool<{ cards: GeneratedCard[] }>(
+      apiKey, HAIKU, CARD_GEN_PROMPT(language, count, responseLanguage), userMessage, maxTokens, analyticsOpts,
+    );
+    await recordUsage(userId, source, 'cards', HAIKU, cost);
+    totalCost += cost;
+    if (Array.isArray(r.cards)) {
+      result = r;
+      break;
+    }
+    if (attempt === 1) {
+      throw new Error(`Invalid AI response: expected cards array, got ${typeof r.cards}`);
+    }
+  }
 
   captureAiGeneration(userId, {
     ...analyticsContext,
@@ -164,7 +175,7 @@ export async function generateCards(
     [cards[i], cards[j]] = [cards[j], cards[i]];
   }
 
-  return { cards, cost };
+  return { cards, cost: totalCost };
 }
 
 export async function judgeAnswer(userId: string, card: Card, userAnswer: string, language: string, explanation?: string, brevity: 'brief' | 'normal' = 'normal', responseLanguage = 'English', analyticsContext?: AiAnalyticsContext) {
