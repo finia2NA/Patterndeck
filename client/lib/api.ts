@@ -85,8 +85,8 @@ export class ApiError extends Error {
   }
 }
 
-async function handleHttpError(status: number, bodyJson: any): Promise<never> {
-  if (status === 401) {
+async function handleHttpError(status: number, bodyJson: any, redirectOnUnauthorized = true): Promise<never> {
+  if (status === 401 && redirectOnUnauthorized) {
     await clearAuthToken();
     await clearUserId();
     await clearUserRole();
@@ -100,17 +100,22 @@ async function handleHttpError(status: number, bodyJson: any): Promise<never> {
   throw new ApiError(message, status, code);
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+type ApiRequestOptions = RequestInit & {
+  redirectOnUnauthorized?: boolean;
+};
+
+async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const { redirectOnUnauthorized = true, ...fetchOptions } = options;
   const headers = await getHeaders();
   const baseUrl = await getBaseUrl();
   const res = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers: { ...headers, ...options.headers },
+    ...fetchOptions,
+    headers: { ...headers, ...fetchOptions.headers },
   });
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    await handleHttpError(res.status, body);
+    await handleHttpError(res.status, body, redirectOnUnauthorized);
   }
 
   return res.json() as Promise<T>;
@@ -149,6 +154,7 @@ export async function login(email: string, password: string) {
   return request<{ token: string; user: { id: string; email: string | null } }>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
+    redirectOnUnauthorized: false,
   });
 }
 

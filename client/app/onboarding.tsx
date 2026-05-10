@@ -237,6 +237,7 @@ export default function Onboarding() {
   const containerWidthRef = useRef(0);
   const heights = useRef<number[]>(Array(TOTAL_STEPS).fill(0));
   const cardAnimX = useRef(new Animated.Value(0)).current;
+  const cardShakeX = useRef(new Animated.Value(0)).current;
   const heightAnim = useRef(new Animated.Value(200)).current;
 
   useEffect(() => {
@@ -262,16 +263,28 @@ export default function Onboarding() {
     ]).start(() => setStep(nextStep));
   }
 
+  function shakeCard() {
+    cardShakeX.stopAnimation();
+    cardShakeX.setValue(0);
+    Animated.sequence([
+      Animated.timing(cardShakeX, { toValue: -4, duration: 55, useNativeDriver: true }),
+      Animated.timing(cardShakeX, { toValue: 4, duration: 75, useNativeDriver: true }),
+      Animated.timing(cardShakeX, { toValue: -2, duration: 65, useNativeDriver: true }),
+      Animated.timing(cardShakeX, { toValue: 0, duration: 55, useNativeDriver: true }),
+    ]).start();
+  }
+
   async function handleSubmitAccount() {
     if (!email.trim() || !password.trim()) {
       setError(t('onboarding.missingCredentials'));
+      shakeCard();
       return;
     }
     if (!isLogin) {
       const emailErr = validateEmail(email);
-      if (emailErr) { setError(emailErr); return; }
+      if (emailErr) { setError(emailErr); shakeCard(); return; }
       const pwErr = validatePassword(password.trim());
-      if (pwErr) { setError(pwErr); return; }
+      if (pwErr) { setError(pwErr); shakeCard(); return; }
     }
     setError(null);
     setLoading(true);
@@ -295,6 +308,7 @@ export default function Onboarding() {
     } catch (e) {
       setLoading(false);
       setError(e instanceof Error ? e.message : t('common.errorGeneric'));
+      shakeCard();
     }
   }
 
@@ -449,6 +463,7 @@ export default function Onboarding() {
       >
         {/* Card */}
         <View ref={cardRef} className="w-full max-w-md bg-surface rounded-3xl p-8 shadow-2xl">
+          <Animated.View style={{ transform: [{ translateX: cardShakeX }] }}>
 
           {/* Step dots */}
           <View className="flex-row mb-8 gap-2">
@@ -547,6 +562,7 @@ export default function Onboarding() {
               </TouchableOpacity>
             )}
           </View>
+          </Animated.View>
         </View>
       </ScrollView>
       {BACKEND_DEBUG_UI_ENABLED && (
