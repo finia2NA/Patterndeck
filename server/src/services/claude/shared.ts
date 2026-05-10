@@ -7,6 +7,7 @@ import { config, isCentralKeyAvailable } from '../../config.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { capture, captureAiGeneration, captureException, type AiAnalyticsContext } from '../analytics.service.js';
 import type { PromptWithTool } from '../../constants/prompts.js';
+import { UI_LOCALE_LANGUAGE_NAMES, isUiLocale } from '@patterndeck/shared';
 
 export const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
@@ -46,6 +47,11 @@ interface AiCallAnalytics {
   source: 'central' | 'own';
   endpoint: string;
   context?: AiAnalyticsContext;
+}
+
+export async function resolveResponseLanguage(userId: string): Promise<string> {
+  const locale = await getSetting(userId, 'ui_language');
+  return locale !== null && isUiLocale(locale) ? UI_LOCALE_LANGUAGE_NAMES[locale] : 'English';
 }
 
 export async function resolveApiKey(userId: string): Promise<{ apiKey: string; source: 'central' | 'own' }> {

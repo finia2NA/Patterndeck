@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { capture, captureException, type AiAnalyticsContext } from './analytics.service.js';
+import { resolveResponseLanguage } from './claude/shared.js';
 
 const PRIOR_DIFFICULTY = 0.35;
 const PRIOR_STRENGTH = 3;
@@ -217,7 +218,10 @@ export async function ensureGrammarCasesForDeck(
 
   const promise = (async () => {
     try {
-      const { extractGrammarCases } = await import('./claude.service.js');
+      const [{ extractGrammarCases }, responseLang] = await Promise.all([
+        import('./claude.service.js'),
+        resolveResponseLanguage(userId),
+      ]);
       const extracted = await extractGrammarCases(
         userId,
         deck.topic,
@@ -230,6 +234,7 @@ export async function ensureGrammarCasesForDeck(
           language: analyticsContext?.language ?? deck.language,
           traceId: analyticsContext?.traceId ?? `case_extraction:${deckId}`,
         },
+        responseLang,
       );
       const cases = normalizeExtractedCases(extracted);
       return persistCases(deckId, sourceHash, cases);
@@ -269,7 +274,10 @@ export async function regenerateGrammarCasesForDeck(
 
   const sourceHash = sourceHashFor(deck.topic, deck.language, deck.explanation);
   try {
-    const { extractGrammarCases } = await import('./claude.service.js');
+    const [{ extractGrammarCases }, responseLang] = await Promise.all([
+      import('./claude.service.js'),
+      resolveResponseLanguage(userId),
+    ]);
     const extracted = await extractGrammarCases(
       userId,
       deck.topic,
@@ -282,6 +290,7 @@ export async function regenerateGrammarCasesForDeck(
         language: analyticsContext?.language ?? deck.language,
         traceId: analyticsContext?.traceId ?? `case_extraction:${deckId}`,
       },
+      responseLang,
     );
     return persistCases(deckId, sourceHash, normalizeExtractedCases(extracted));
   } catch (error) {

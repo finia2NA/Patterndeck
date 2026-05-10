@@ -5,7 +5,7 @@ import { sseHeaders, sendChunk, sendDone, sendError } from '../../lib/sse.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import type { AiAnalyticsContext } from '../analytics.service.js';
 import { EXPLANATION_PROMPT } from '../../constants/prompts.js';
-import { callTextStream, recordUsage, resolveApiKey, SONNET } from './shared.js';
+import { callTextStream, recordUsage, resolveApiKey, resolveResponseLanguage, SONNET } from './shared.js';
 
 const activeVersion = new Map<string, number>();
 
@@ -39,11 +39,14 @@ async function runExplanation(userId: string, deckId: string, version: number): 
 
   let fullText = '';
   try {
-    const { apiKey, source } = await resolveApiKey(userId);
+    const [{ apiKey, source }, responseLang] = await Promise.all([
+      resolveApiKey(userId),
+      resolveResponseLanguage(userId),
+    ]);
     const { cost } = await callTextStream(
       apiKey, SONNET,
-      EXPLANATION_PROMPT(deck.language),
-      [{ role: 'user', content: JSON.stringify({ topic: deck.topic, ...(deck.clarification?.trim() ? { clarification: deck.clarification.trim() } : {}) }) }],
+      EXPLANATION_PROMPT(deck.language, responseLang),
+      [{ role: 'user', content: JSON.stringify({ topic: deck.topic, studyLanguage: deck.language, responseLanguage: responseLang, ...(deck.clarification?.trim() ? { clarification: deck.clarification.trim() } : {}) }) }],
       4096,
       (chunk) => { fullText += chunk; },
       undefined,
@@ -80,11 +83,14 @@ async function runExplanation(userId: string, deckId: string, version: number): 
 }
 
 export async function streamExplanation(req: Request, res: Response, userId: string, deckId: string) {
-  const { apiKey, source } = await resolveApiKey(userId);
-  const deck = await prisma.deck.findUnique({
-    where: { nodeId: deckId },
-    include: { node: { select: { name: true } } },
-  });
+  const [{ apiKey, source }, responseLang, deck] = await Promise.all([
+    resolveApiKey(userId),
+    resolveResponseLanguage(userId),
+    prisma.deck.findUnique({
+      where: { nodeId: deckId },
+      include: { node: { select: { name: true } } },
+    }),
+  ]);
   if (!deck) throw new AppError(404, 'NOT_FOUND', 'Deck not found.');
 
   await setExplanationGenerating(deckId);
@@ -98,8 +104,8 @@ export async function streamExplanation(req: Request, res: Response, userId: str
   try {
     const { wasTruncated, cost } = await callTextStream(
       apiKey, SONNET,
-      EXPLANATION_PROMPT(deck.language),
-      [{ role: 'user', content: JSON.stringify({ topic: deck.topic, ...(deck.clarification?.trim() ? { clarification: deck.clarification.trim() } : {}) }) }],
+      EXPLANATION_PROMPT(deck.language, responseLang),
+      [{ role: 'user', content: JSON.stringify({ topic: deck.topic, studyLanguage: deck.language, responseLanguage: responseLang, ...(deck.clarification?.trim() ? { clarification: deck.clarification.trim() } : {}) }) }],
       4096,
       (chunk) => {
         fullText += chunk;
