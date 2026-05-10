@@ -117,6 +117,7 @@ export function FlashcardDeck({
               onSubmitEditing={onSubmitAnswer}
               returnKeyType="go"
               editable={cardPhase === 'input'}
+              autoComplete="off"
               autoFocus
             />
             <TouchableOpacity
