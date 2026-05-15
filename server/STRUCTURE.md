@@ -34,6 +34,7 @@ server/
 │   │   ├── crypto.service.ts       ← AES-256-GCM encrypt/decrypt for API keys
 │   │   ├── usage.service.ts        ← Cost tracking: ledger recording, monthly summaries, limit checks
 │   │   ├── ai-routing.service.ts   ← Provider-neutral AI routing, model discovery, fallbacks, pricing/cost estimates
+│   │   ├── model-tool-use.service.ts ← Provider-specific structured tool-call request/response handling
 │   │   ├── claude.service.ts       ← Compatibility re-export for the Claude service modules
 │   │   ├── claude/                 ← Public AI feature implementation, backed by ai-routing.service
 │   │   │   ├── shared.ts           ← Compatibility re-exports for legacy imports
@@ -185,6 +186,12 @@ Provider-neutral AI transport and routing layer for Anthropic, OpenAI, OpenRoute
 - Retries one fallback model on technical failures only; streaming fallback is allowed only before any text chunk has been sent.
 - Personal Anthropic keys remain Anthropic-only and never fall back to server provider keys.
 - Records analytics and usage with actual provider/model; usage ledger model values include the provider prefix for cross-provider cost tracking.
+
+### `model-tool-use.service.ts`
+Provider-specific structured tool-call transport used by `ai-routing.service.ts`.
+- Preserves Claude's native Messages API tool-use request/response shape for existing structured endpoints.
+- Normalizes OpenAI-compatible function-call responses into typed tool results and multi-edit tool calls.
+- Handles DeepSeek V4 tool-call modes, including disabled-thinking single turns for simple endpoints and two-turn thinking/formatting calls for reasoning-sensitive endpoints.
 
 ### `claude/` and `claude.service.ts`
 Feature-level AI functions. `claude.service.ts` re-exports the split implementation modules for existing imports, while the transport/model choice is handled by `ai-routing.service.ts`.

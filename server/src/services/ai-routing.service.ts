@@ -9,6 +9,7 @@ import { getGlobalConfig, setGlobalConfig } from './global-config.service.js';
 import { getSetting } from './settings.service.js';
 import { canUseCentralKey, recordUsage } from './usage.service.js';
 import { UI_LOCALE_LANGUAGE_NAMES, isUiLocale } from '@patterndeck/shared';
+import { executeToolUse, type TokenUsage, type ToolCallMode } from './model-tool-use.service.js';
 
 export const SONNET = 'claude-sonnet-4-6';
 export const HAIKU = 'claude-haiku-4-5-20251001';
@@ -57,6 +58,7 @@ export interface ProviderModel {
   outputPrice?: number;
   supportsTools?: boolean;
   supportsStructuredOutputs?: boolean;
+  toolCallMode?: ToolCallMode;
 }
 
 interface AiCallAnalytics {
@@ -80,12 +82,6 @@ interface AttemptContext {
   stream: boolean;
   input?: unknown;
   output?: unknown;
-}
-
-interface TokenUsage {
-  inputTokens: number;
-  outputTokens: number;
-  cost?: number;
 }
 
 interface ProviderConfig {
@@ -113,17 +109,17 @@ const PRICE: Record<string, { input: number; output: number }> = {
   'qwen3-235b-a22b-instruct-2507': { input: 0.287, output: 0.92 },
 };
 
-export const AI_ENDPOINT_METADATA: Record<AiEndpoint, { label: string; description: string; mode: 'tool' | 'stream' | 'edit' }> = {
-  cards: { label: 'Cards', description: 'Generate flashcards for a grammar topic.', mode: 'tool' },
-  judge: { label: 'Judge Answer', description: 'Judge a learner translation attempt.', mode: 'tool' },
-  'rate-session': { label: 'Rate Session', description: 'Rate and summarize a study session.', mode: 'tool' },
-  'explain-sentence': { label: 'Explain Sentence', description: 'Explain a revealed card answer.', mode: 'tool' },
-  'word-hint': { label: 'Word Hint', description: 'Generate dictionary-form vocabulary hints.', mode: 'tool' },
+export const AI_ENDPOINT_METADATA: Record<AiEndpoint, { label: string; description: string; mode: 'tool' | 'stream' | 'edit'; requiresThinking?: boolean }> = {
+  cards: { label: 'Cards', description: 'Generate flashcards for a grammar topic.', mode: 'tool', requiresThinking: false },
+  judge: { label: 'Judge Answer', description: 'Judge a learner translation attempt.', mode: 'tool', requiresThinking: true },
+  'rate-session': { label: 'Rate Session', description: 'Rate and summarize a study session.', mode: 'tool', requiresThinking: false },
+  'explain-sentence': { label: 'Explain Sentence', description: 'Explain a revealed card answer.', mode: 'tool', requiresThinking: true },
+  'word-hint': { label: 'Word Hint', description: 'Generate dictionary-form vocabulary hints.', mode: 'tool', requiresThinking: false },
   explanation: { label: 'Explanation', description: 'Generate streamed grammar explanations.', mode: 'stream' },
-  'case-extraction': { label: 'Case Extraction', description: 'Extract grammar coverage cases from explanations.', mode: 'tool' },
-  rejection: { label: 'Rejection Review', description: 'Review a rejected learner answer.', mode: 'tool' },
+  'case-extraction': { label: 'Case Extraction', description: 'Extract grammar coverage cases from explanations.', mode: 'tool', requiresThinking: true },
+  rejection: { label: 'Rejection Review', description: 'Review a rejected learner answer.', mode: 'tool', requiresThinking: true },
   chat: { label: 'Card Chat', description: 'Stream tutor chat about the current card.', mode: 'stream' },
-  'explanation-edit': { label: 'Explanation Edit', description: 'Apply tool-based edits to Markdown explanations.', mode: 'edit' },
+  'explanation-edit': { label: 'Explanation Edit', description: 'Apply tool-based edits to Markdown explanations.', mode: 'edit', requiresThinking: true },
 };
 
 export const DEFAULT_AI_ROUTING_CONFIG: AiRoutingConfig = Object.fromEntries(
@@ -177,8 +173,8 @@ function providerConfigs(): Record<AiProvider, ProviderConfig> {
       baseUrl: config.deepseekBaseUrl,
       modelListSupport: 'live',
       curatedModels: [
-        { id: 'deepseek-v4-flash', inputPrice: 0.14, outputPrice: 0.28, supportsTools: true, supportsStructuredOutputs: true },
-        { id: 'deepseek-v4-pro', inputPrice: 0.435, outputPrice: 0.87, supportsTools: true, supportsStructuredOutputs: true },
+        { id: 'deepseek-v4-flash', inputPrice: 0.14, outputPrice: 0.28, supportsTools: true, supportsStructuredOutputs: true, toolCallMode: 'thinking-two-turn' },
+        { id: 'deepseek-v4-pro', inputPrice: 0.435, outputPrice: 0.87, supportsTools: true, supportsStructuredOutputs: true, toolCallMode: 'thinking-two-turn' },
         { id: 'deepseek-chat', supportsTools: true, supportsStructuredOutputs: true },
       ],
     },
@@ -620,78 +616,40 @@ function captureFailure(ctx: AttemptContext, usage: TokenUsage, latencyMs: numbe
   });
 }
 
-async function callAnthropicTool<T>(apiKey: string, model: string, prompt: PromptWithTool, userMessage: string, maxTokens: number): Promise<{ result: T; usage: TokenUsage }> {
-  const res = await fetch(ANTHROPIC_API_URL, {
-    method: 'POST',
-    headers: anthropicHeaders(apiKey),
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      system: prompt.system,
-      tools: [{ name: prompt.tool.name, description: prompt.tool.description, input_schema: prompt.tool.inputSchema }],
-      tool_choice: { type: 'tool', name: prompt.tool.name },
-      messages: [{ role: 'user', content: userMessage }],
-    }),
-  });
-  if (!res.ok) throw new Error(await parseErrorResponse(res));
-  const data = await res.json() as { usage?: { input_tokens?: number; output_tokens?: number }; content?: { type: string; input?: unknown }[] };
-  const toolUse = data.content?.find((b) => b.type === 'tool_use');
-  if (!toolUse) throw new Error('No tool_use block in Anthropic response');
-  return {
-    result: toolUse.input as T,
-    usage: { inputTokens: data.usage?.input_tokens ?? 0, outputTokens: data.usage?.output_tokens ?? 0 },
-  };
+function toolCallModeForRoute(route: AiModelRef): ToolCallMode {
+  const configuredMode = providerConfigs()[route.provider].curatedModels.find(model => model.id === route.model)?.toolCallMode;
+  if (configuredMode) return configuredMode;
+  if (route.provider === 'deepseek' && ['deepseek-v4-flash', 'deepseek-v4-pro'].includes(route.model)) return 'thinking-two-turn';
+  return 'standard';
 }
 
-function openAiTools(tool: ToolDef) {
-  return [{
-    type: 'function',
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.inputSchema,
-    },
-  }];
-}
-
-async function callOpenAiTool<T>(route: AiModelRef, apiKey: string, prompt: PromptWithTool, userMessage: string, maxTokens: number): Promise<{ result: T; usage: TokenUsage }> {
-  const provider = providerConfigs()[route.provider];
-  const res = await fetch(`${cleanBaseUrl(provider.baseUrl)}/chat/completions`, {
-    method: 'POST',
-    headers: providerHeaders(route.provider, apiKey),
-    body: JSON.stringify({
-      model: route.model,
-      max_tokens: maxTokens,
-      messages: [
-        { role: 'system', content: prompt.system },
-        { role: 'user', content: userMessage },
-      ],
-      tools: openAiTools(prompt.tool),
-      tool_choice: { type: 'function', function: { name: prompt.tool.name } },
-    }),
-  });
-  if (!res.ok) throw new Error(await parseErrorResponse(res));
-  const data = await res.json() as {
-    usage?: { prompt_tokens?: number; completion_tokens?: number; input_tokens?: number; output_tokens?: number };
-    choices?: Array<{ message?: { tool_calls?: Array<{ function?: { arguments?: string | object } }>; content?: string } }>;
-  };
-  const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-  if (args === undefined) throw new Error('No tool call in provider response');
-  const result = typeof args === 'string' ? JSON.parse(args) as T : args as T;
-  return {
-    result,
-    usage: {
-      inputTokens: data.usage?.prompt_tokens ?? data.usage?.input_tokens ?? 0,
-      outputTokens: data.usage?.completion_tokens ?? data.usage?.output_tokens ?? 0,
-      cost: typeof (data.usage as { cost?: unknown } | undefined)?.cost === 'number' ? (data.usage as { cost: number }).cost : undefined,
-    },
-  };
-}
-
-async function callRouteTool<T>(route: AiModelRef, credentials: Credentials, prompt: PromptWithTool, userMessage: string, maxTokens: number): Promise<{ result: T; usage: TokenUsage }> {
+async function callRouteTool<T>(
+  route: AiModelRef,
+  credentials: Credentials,
+  endpoint: AiEndpoint,
+  prompt: PromptWithTool,
+  userMessage: string,
+  maxTokens: number,
+): Promise<{ result: T; usage: TokenUsage }> {
   const apiKey = routeApiKey(route, credentials);
-  if (route.provider === 'anthropic') return callAnthropicTool<T>(apiKey, route.model, prompt, userMessage, maxTokens);
-  return callOpenAiTool<T>(route, apiKey, prompt, userMessage, maxTokens);
+  const provider = providerConfigs()[route.provider];
+  const response = await executeToolUse<T>({
+    route,
+    apiKey,
+    baseUrl: provider.baseUrl,
+    headers: providerHeaders(route.provider, apiKey),
+    toolCallMode: toolCallModeForRoute(route),
+    parseErrorResponse,
+  }, {
+    kind: 'single',
+    endpoint,
+    prompt,
+    userMessage,
+    maxTokens,
+    requiresThinking: AI_ENDPOINT_METADATA[endpoint].requiresThinking ?? false,
+  });
+  if (response.result === undefined) throw new Error('No tool result in provider response');
+  return { result: response.result, usage: response.usage };
 }
 
 export async function callStructuredTool<T>(
@@ -713,7 +671,7 @@ export async function callStructuredTool<T>(
     const ctx: AttemptContext = { analytics, route, credentials, stream: false, fallback: i > 0, fallbackFrom: i > 0 ? fallbackFrom : undefined, input: userMessage };
     let usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
     try {
-      const response = await callRouteTool<T>(route, credentials, prompt, userMessage, maxTokens);
+      const response = await callRouteTool<T>(route, credentials, endpoint, prompt, userMessage, maxTokens);
       usage = response.usage;
       const latencyMs = Date.now() - startedAt;
       const cost = usage.cost ?? calcCost(route.model, usage.inputTokens, usage.outputTokens, route.provider);
@@ -903,47 +861,26 @@ export async function callEditTools(
     let usage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
     try {
       const apiKey = routeApiKey(route, credentials);
-      let toolCalls: Array<{ name?: string; input?: Record<string, string> }> = [];
-      let text = '';
-      if (route.provider === 'anthropic') {
-        const res = await fetch(ANTHROPIC_API_URL, {
-          method: 'POST',
-          headers: anthropicHeaders(apiKey),
-          body: JSON.stringify({
-            model: route.model,
-            max_tokens: maxTokens,
-            system,
-            tools: tools.map(t => ({ name: t.name, description: t.description, input_schema: t.inputSchema })),
-            messages,
-          }),
-        });
-        if (!res.ok) throw new Error(await parseErrorResponse(res));
-        const data = await res.json() as { usage?: { input_tokens?: number; output_tokens?: number }; content?: Array<{ type: string; name?: string; input?: Record<string, string>; text?: string }> };
-        usage = { inputTokens: data.usage?.input_tokens ?? 0, outputTokens: data.usage?.output_tokens ?? 0 };
-        toolCalls = (data.content ?? []).filter(b => b.type === 'tool_use').map(b => ({ name: b.name, input: b.input }));
-        text = (data.content ?? []).filter(b => b.type === 'text').map(b => b.text ?? '').join('').trim();
-      } else {
-        const res = await fetch(`${cleanBaseUrl(providerConfigs()[route.provider].baseUrl)}/chat/completions`, {
-          method: 'POST',
-          headers: providerHeaders(route.provider, apiKey),
-          body: JSON.stringify({
-            model: route.model,
-            max_tokens: maxTokens,
-            messages: toOpenAiMessages(system, messages),
-            tools: tools.map(tool => openAiTools(tool)[0]),
-            tool_choice: 'auto',
-          }),
-        });
-        if (!res.ok) throw new Error(await parseErrorResponse(res));
-        const data = await res.json() as { usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number }; choices?: Array<{ message?: { content?: string; tool_calls?: Array<{ function?: { name?: string; arguments?: string | object } }> } }> };
-        usage = { inputTokens: data.usage?.prompt_tokens ?? 0, outputTokens: data.usage?.completion_tokens ?? 0, cost: data.usage?.cost };
-        const message = data.choices?.[0]?.message;
-        text = message?.content ?? '';
-        toolCalls = (message?.tool_calls ?? []).map(call => {
-          const args = call.function?.arguments;
-          return { name: call.function?.name, input: typeof args === 'string' ? JSON.parse(args) as Record<string, string> : args as Record<string, string> | undefined };
-        });
-      }
+      const provider = providerConfigs()[route.provider];
+      const response = await executeToolUse<never>({
+        route,
+        apiKey,
+        baseUrl: provider.baseUrl,
+        headers: providerHeaders(route.provider, apiKey),
+        toolCallMode: toolCallModeForRoute(route),
+        parseErrorResponse,
+      }, {
+        kind: 'multi-edit',
+        endpoint: 'explanation-edit',
+        tools,
+        system,
+        messages,
+        maxTokens,
+        requiresThinking: AI_ENDPOINT_METADATA['explanation-edit'].requiresThinking ?? false,
+      });
+      usage = response.usage;
+      const toolCalls = response.toolCalls ?? [];
+      const text = response.text;
       const latencyMs = Date.now() - startedAt;
       const cost = usage.cost ?? calcCost(route.model, usage.inputTokens, usage.outputTokens, route.provider);
       captureAttempt({ ...ctx, output: { tool_calls_count: toolCalls.length, summary_length: text.length } }, usage, cost, latencyMs, true);
