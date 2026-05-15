@@ -8,6 +8,7 @@ import { decrypt } from './crypto.service.js';
 import { getGlobalConfig, setGlobalConfig } from './global-config.service.js';
 import { getSetting } from './settings.service.js';
 import { canUseCentralKey, recordUsage } from './usage.service.js';
+import { UI_LOCALE_LANGUAGE_NAMES, isUiLocale } from '@patterndeck/shared';
 
 export const SONNET = 'claude-sonnet-4-6';
 export const HAIKU = 'claude-haiku-4-5-20251001';
@@ -364,6 +365,11 @@ function routeApiKey(route: AiModelRef, credentials: Credentials): string {
 export async function resolveApiKey(userId: string): Promise<{ apiKey: string; source: 'central' | 'own' }> {
   const credentials = await resolveCredentials(userId);
   return { apiKey: credentials.apiKey, source: credentials.source };
+}
+
+export async function resolveResponseLanguage(userId: string): Promise<string> {
+  const locale = await getSetting(userId, 'ui_language');
+  return locale !== null && isUiLocale(locale) ? UI_LOCALE_LANGUAGE_NAMES[locale] : 'English';
 }
 
 function normalizeRoute(endpoint: AiEndpoint, route: Partial<AiEndpointRoute> | undefined): AiEndpointRoute {

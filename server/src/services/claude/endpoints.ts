@@ -91,6 +91,7 @@ export async function generateCards(
     },
   };
 
+
   let result!: { cards: GeneratedCard[] };
   let totalCost = 0;
   let model!: string;

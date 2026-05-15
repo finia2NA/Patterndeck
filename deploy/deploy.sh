@@ -154,7 +154,7 @@ DEPLOY_EOF
 echo ""
 echo "=== Verifying deployment ==="
 sleep 2
-STATUS=$(curl -sf https://patterndeck.richardhanss.de/api/health 2>&1) && echo "Health check: ${STATUS}" || echo "Health check failed (may need DNS/SSL setup first)"
+STATUS=$(curl -sf https://patterndeck.richardhanss.de/api/v1/health 2>&1) && echo "Health check: ${STATUS}" || echo "Health check failed (may need DNS/SSL setup first)"
 
 echo ""
 echo "=== Done ==="

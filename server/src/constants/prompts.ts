@@ -239,7 +239,7 @@ You may use **bold** to highlight key grammar forms or example phrases.${judgmen
     inputSchema: {
       type: 'object',
       properties: {
-        reason: { type: 'string', description: brevity === 'brief' ? 'A few-word note (e.g. "Wrong tense" or "Correct!").' : 'One-sentence explanation of why the answer is correct or incorrect.' },
+        reason: { type: 'string', description: brevity === 'brief' ? `A few-word note in ${responseLanguage}.` : `One-sentence explanation in ${responseLanguage} of why the answer is correct or incorrect.` },
         correct: { type: 'boolean', description: 'Whether the answer is correct.' },
       },
       required: ['reason', 'correct'],

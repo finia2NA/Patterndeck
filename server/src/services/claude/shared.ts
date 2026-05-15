@@ -7,4 +7,5 @@ export {
   errorMessage,
   recordUsage,
   resolveApiKey,
+  resolveResponseLanguage,
 } from '../ai-routing.service.js';

@@ -2,13 +2,15 @@ import { useRef, useState, type RefObject } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { useColors } from '@/constants/theme';
 import type { Language, CardCount } from '@/constants/session';
-import { SharedCreationNameField, SharedCreationOptionsSection } from './DeckModalSharedCreationFields';
+import { DeckModalTextInput, SharedCreationNameField, SharedCreationOptionsSection } from './DeckModalSharedCreationFields';
 import { NeedsConfirmationButton } from '@/components/NeedsConfirmationButton';
 import { usePageSheetScrolling } from '@/components/PageSheetScrollContext';
 import { AnimatedCollapsible } from '@/components/AnimatedCollapsible';
 import { useI18n } from '@/lib/i18n';
 import type { GrammarCaseSummary } from '@/lib/api';
 import { useScreenSize } from '@/hooks/useScreenSize';
+import { useTutorial } from '@/hooks/useTutorial';
+import { TutorialOverlay, type TutorialStep } from '@/components/tutorial/TutorialOverlay';
 
 interface DeckModalCreateTabProps {
   isCollection: boolean;
@@ -70,6 +72,18 @@ export function DeckModalCreateTab({
   const topicRef = useRef<TextInput>(null);
   const clarificationRef = useRef<TextInput>(null);
   const explanationRef = useRef<TextInput>(null);
+
+  const { visible: tutorialVisible, onDone: onTutorialDone } = useTutorial('deck_creation');
+  const showDeckTutorial = tutorialVisible && !isEdit && !isCollection;
+  const nameFieldRef = useRef<View>(null);
+  const topicFieldRef = useRef<View>(null);
+  const clarificationFieldRef = useRef<View>(null);
+
+  const deckTutorialSteps: TutorialStep[] = [
+    { ref: nameFieldRef, title: t('tutorial.deck.name.title'), body: t('tutorial.deck.name.body') },
+    { ref: topicFieldRef, title: t('tutorial.deck.topic.title'), body: t('tutorial.deck.topic.body') },
+    { ref: clarificationFieldRef, title: t('tutorial.deck.clarification.title'), body: t('tutorial.deck.clarification.body') },
+  ];
   const [explanationExpanded, setExplanationExpanded] = useState(false);
   const [casesExpanded, setCasesExpanded] = useState(false);
   const caseCountLabel = grammarCases.length === 1
@@ -84,50 +98,56 @@ export function DeckModalCreateTab({
 
   return (
     <>
-      <SharedCreationNameField
-        label={isCollection ? t('deck.collectionName') : t('deck.deckName')}
-        description={isCollection
-          ? t('deck.renameCollection')
-          : t('deck.pathDescription')}
-        placeholder={isCollection ? t('deck.collectionPlaceholder') : t('deck.pathPlaceholder')}
-        value={name}
-        onChangeText={onNameChange}
-        autoFocus
-      />
+      <View ref={nameFieldRef}>
+        <SharedCreationNameField
+          label={isCollection ? t('deck.collectionName') : t('deck.deckName')}
+          description={isCollection
+            ? t('deck.renameCollection')
+            : t('deck.pathDescription')}
+          placeholder={isCollection ? t('deck.collectionPlaceholder') : t('deck.pathPlaceholder')}
+          value={name}
+          onChangeText={onNameChange}
+          autoFocus
+        />
+      </View>
 
       {!isCollection && (
         <>
-          <Text className="text-foreground/80 text-sm font-medium mb-2">{t('deck.topic')}</Text>
-          <Text className="text-foreground-secondary text-xs mb-2">
-            {t('deck.topicDescription')}
-          </Text>
-          <TextInput
-            ref={topicRef}
-            className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-base mb-6"
-            placeholder={t('deck.topicPlaceholder')}
-            placeholderTextColor={colors.foreground_muted}
-            value={topic}
-            onChangeText={onTopicChange}
-            multiline
-            style={{ minHeight: 80, textAlignVertical: 'top' }}
-            onFocus={() => handleScrollAwareFocus(topicRef)}
-          />
+          <View ref={topicFieldRef}>
+            <Text className="text-foreground/80 text-sm font-medium mb-2">{t('deck.topic')}</Text>
+            <Text className="text-foreground-secondary text-xs mb-2">
+              {t('deck.topicDescription')}
+            </Text>
+            <DeckModalTextInput
+              ref={topicRef}
+              className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-base mb-6"
+              placeholder={t('deck.topicPlaceholder')}
+              placeholderTextColor={colors.foreground_muted}
+              value={topic}
+              onChangeText={onTopicChange}
+              multiline
+              style={{ minHeight: 80, textAlignVertical: 'top' }}
+              onFocus={() => handleScrollAwareFocus(topicRef)}
+            />
+          </View>
 
-          <Text className="text-foreground/80 text-sm font-medium mb-2">{t('deck.clarification')}</Text>
-          <Text className="text-foreground-secondary text-xs mb-2">
-            {t('deck.clarificationDescription')}
-          </Text>
-          <TextInput
-            ref={clarificationRef}
-            className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm mb-6"
-            placeholder={t('deck.clarificationPlaceholder')}
-            placeholderTextColor={colors.foreground_muted}
-            value={clarification}
-            onChangeText={onClarificationChange}
-            multiline
-            style={{ minHeight: 110, textAlignVertical: 'top' }}
-            onFocus={() => handleScrollAwareFocus(clarificationRef)}
-          />
+          <View ref={clarificationFieldRef}>
+            <Text className="text-foreground/80 text-sm font-medium mb-2">{t('deck.clarification')}</Text>
+            <Text className="text-foreground-secondary text-xs mb-2">
+              {t('deck.clarificationDescription')}
+            </Text>
+            <DeckModalTextInput
+              ref={clarificationRef}
+              className="bg-background-muted border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm mb-6"
+              placeholder={t('deck.clarificationPlaceholder')}
+              placeholderTextColor={colors.foreground_muted}
+              value={clarification}
+              onChangeText={onClarificationChange}
+              multiline
+              style={{ minHeight: 110, textAlignVertical: 'top' }}
+              onFocus={() => handleScrollAwareFocus(clarificationRef)}
+            />
+          </View>
 
           {showExplanationField && (
             <View className="mb-6">
@@ -176,7 +196,7 @@ export function DeckModalCreateTab({
                   </TouchableOpacity>
                   <AnimatedCollapsible expanded={explanationExpanded} keepMounted>
                     <View className="px-4 pb-4">
-                      <TextInput
+                      <DeckModalTextInput
                         ref={explanationRef}
                         className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-foreground-muted text-sm"
                         placeholder={t('deck.generatedExplanationPlaceholder')}
@@ -274,6 +294,7 @@ export function DeckModalCreateTab({
           )}
         </View>
       )}
+      <TutorialOverlay steps={deckTutorialSteps} visible={showDeckTutorial} onDone={onTutorialDone} measureDelay={500} />
     </>
   );
 }
