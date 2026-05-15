@@ -17,6 +17,7 @@ import { getSetting } from '../services/settings.service.js';
 import type { AiAnalyticsContext } from '../services/analytics.service.js';
 import { selectCaseTargets } from '../services/grammar-case.service.js';
 import { prisma } from '../lib/prisma.js';
+import { getAiRoutingConfig, type AiEndpoint } from '../services/ai-routing.service.js';
 
 const DEFAULT_CARD_COUNT = 10;
 
@@ -25,8 +26,12 @@ export const DEBUG_AI = true;
 
 claudeProxyRouter.use(requireAuth);
 
-function logAI(userId: string, type: string, model: string) {
-  console.log(`[AI] ${userId} | ${type} | ${model}`);
+async function logAI(userId: string, endpoint: AiEndpoint) {
+  // TODO: logs the configured primary model, not the model actually used — if a fallback fires this will be wrong.
+  // Non-streaming endpoints return the real model; streaming endpoints would need a callback or out-of-band signal.
+  const routing = await getAiRoutingConfig();
+  const { provider, model } = routing[endpoint].primary;
+  console.log(`[AI] ${userId} | ${endpoint} | ${provider}:${model}`);
 }
 
 function analyticsContext(body: Record<string, unknown>, fallback: Partial<AiAnalyticsContext> = {}): AiAnalyticsContext {
@@ -66,7 +71,7 @@ claudeProxyRouter.post('/cards', async (req, res, next) => {
       const setting = await getSetting(req.userId!, 'default_card_count');
       resolvedCount = setting ? parseInt(setting, 10) : DEFAULT_CARD_COUNT;
     }
-    logAI(req.userId!, 'cards', 'haiku');
+    await logAI(req.userId!, 'cards');
     const ctx = analyticsContext(req.body, {
       appSessionId: req.appSessionId,
       deckId: typeof deckId === 'string' ? deckId : undefined,
@@ -102,7 +107,7 @@ claudeProxyRouter.post('/judge', async (req, res, next) => {
       throw new AppError(400, 'MISSING_FIELDS', 'card, userAnswer, and language are required.');
     }
     const resolvedBrevity = brevity === 'brief' ? 'brief' : 'normal';
-    logAI(req.userId!, `judge:${resolvedBrevity}`, 'haiku');
+    await logAI(req.userId!, 'judge');
     const ctx = analyticsContext(req.body, { appSessionId: req.appSessionId, language: String(language) });
     const result = await judgeAnswer(req.userId!, card, userAnswer, language, explanation, resolvedBrevity, responseLanguage(req.body), {
       ...ctx,
@@ -119,7 +124,7 @@ claudeProxyRouter.post('/explanation/stream', async (req, res, next) => {
     if (!topic || !language) {
       throw new AppError(400, 'MISSING_FIELDS', 'topic and language are required.');
     }
-    logAI(req.userId!, 'explanation', 'sonnet');
+    await logAI(req.userId!, 'explanation');
     await streamExplanationGeneric(req, res, req.userId!, topic, language, responseLanguage(req.body), analyticsContext(req.body, {
       appSessionId: req.appSessionId,
       deckTopic: String(topic),
@@ -136,7 +141,7 @@ claudeProxyRouter.post('/rejection', async (req, res, next) => {
       throw new AppError(400, 'MISSING_FIELDS', 'card, userAnswer, and language are required.');
     }
     const resolvedBrevity = brevity === 'brief' ? 'brief' : 'normal';
-    logAI(req.userId!, `rejection:${resolvedBrevity}`, 'sonnet');
+    await logAI(req.userId!, 'rejection');
     const ctx = analyticsContext(req.body, { appSessionId: req.appSessionId, language: String(language) });
     const result = await reviewRejection(req.userId!, card, userAnswer, language, explanation, resolvedBrevity, responseLanguage(req.body), {
       ...ctx,
@@ -153,7 +158,7 @@ claudeProxyRouter.post('/rate-session', async (req, res, next) => {
     if (!topic || !language || !Array.isArray(cards)) {
       throw new AppError(400, 'MISSING_FIELDS', 'topic, language, and cards are required.');
     }
-    logAI(req.userId!, 'rate-session', 'haiku');
+    await logAI(req.userId!, 'rate-session');
     const ctx = analyticsContext(req.body, { appSessionId: req.appSessionId, deckTopic: String(topic), language: String(language) });
     const result = await rateSession(req.userId!, topic, language, cards, responseLanguage(req.body), {
       ...ctx,
@@ -170,7 +175,7 @@ claudeProxyRouter.post('/explain-sentence', async (req, res, next) => {
     if (!card || !language) {
       throw new AppError(400, 'MISSING_FIELDS', 'card and language are required.');
     }
-    logAI(req.userId!, 'explain-sentence', 'haiku');
+    await logAI(req.userId!, 'explain-sentence');
     const ctx = analyticsContext(req.body, { appSessionId: req.appSessionId, language: String(language) });
     const result = await explainSentence(req.userId!, card, language, explanation, responseLanguage(req.body), {
       ...ctx,
@@ -187,7 +192,7 @@ claudeProxyRouter.post('/word-hint', async (req, res, next) => {
     if (!word || !english || !targetLanguage || !language) {
       throw new AppError(400, 'MISSING_FIELDS', 'word, english, targetLanguage, and language are required.');
     }
-    logAI(req.userId!, 'word-hint', 'haiku');
+    await logAI(req.userId!, 'word-hint');
     const ctx = analyticsContext(req.body, { appSessionId: req.appSessionId, language: String(language) });
     const result = await generateWordHint(req.userId!, word, english, targetLanguage, language, responseLanguage(req.body), {
       ...ctx,
@@ -204,7 +209,7 @@ claudeProxyRouter.post('/explanation/edit', async (req, res, next) => {
     if (!explanation || !instruction) {
       throw new AppError(400, 'MISSING_FIELDS', 'explanation and instruction are required.');
     }
-    logAI(req.userId!, 'explanation-edit', 'sonnet');
+    await logAI(req.userId!, 'explanation-edit');
     const ctx = analyticsContext(req.body, {
       appSessionId: req.appSessionId,
       deckId: typeof nodeId === 'string' ? nodeId : undefined,
@@ -223,7 +228,7 @@ claudeProxyRouter.post('/chat/stream', async (req, res, next) => {
     if (!card || userAnswer === undefined || userAnswer === null || !language || wasCorrect === undefined || !messages) {
       throw new AppError(400, 'MISSING_FIELDS', 'card, userAnswer, language, wasCorrect, and messages are required.');
     }
-    logAI(req.userId!, 'chat', 'sonnet');
+    await logAI(req.userId!, 'chat');
     const systemPrompt = CARD_CHAT_PROMPT(language, responseLanguage(req.body), userAnswer === '');
     const cardContext = {
       english: card.english,

@@ -391,7 +391,6 @@ MonthlyUsageSummary  (denormalized running totals for fast limit checks)
 | `APPLE_CLIENT_ID`                 | No       | Apple Sign In client ID                          |
 | `GOOGLE_CLIENT_ID`                | No       | Google OAuth2 client ID                          |
 | `ANTHROPIC_API_KEY`               | No       | Shared Anthropic API key for all users           |
-| `CENTRAL_API_KEY`                 | No       | Legacy alias for `ANTHROPIC_API_KEY`             |
 | `OPENAI_API_KEY`                  | No       | OpenAI API key for admin-configured routing      |
 | `OPENROUTER_API_KEY`              | No       | OpenRouter API key for admin-configured routing  |
 | `DEEPSEEK_API_KEY`                | No       | DeepSeek API key for admin-configured routing    |

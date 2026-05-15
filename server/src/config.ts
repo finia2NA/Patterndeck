@@ -19,8 +19,7 @@ export const config = {
   encryptionKey: required('ENCRYPTION_KEY'),
   appleClientId: process.env.APPLE_CLIENT_ID ?? '',
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY || process.env.CENTRAL_API_KEY || null,
-  centralApiKey: process.env.ANTHROPIC_API_KEY || process.env.CENTRAL_API_KEY || null,
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || null,
   openaiApiKey: process.env.OPENAI_API_KEY || null,
   openrouterApiKey: process.env.OPENROUTER_API_KEY || null,
   deepseekApiKey: process.env.DEEPSEEK_API_KEY || null,
@@ -43,5 +42,5 @@ export const config = {
 } as const;
 
 export function isCentralKeyAvailable(): boolean {
-  return config.centralApiKey != null;
+  return config.anthropicApiKey != null;
 }

@@ -175,7 +175,7 @@ function providerConfigs(): Record<AiProvider, ProviderConfig> {
       label: 'DeepSeek',
       apiKey: config.deepseekApiKey,
       baseUrl: config.deepseekBaseUrl,
-      modelListSupport: 'static',
+      modelListSupport: 'live',
       curatedModels: [
         { id: 'deepseek-v4-flash', inputPrice: 0.14, outputPrice: 0.28, supportsTools: true, supportsStructuredOutputs: true },
         { id: 'deepseek-v4-pro', inputPrice: 0.435, outputPrice: 0.87, supportsTools: true, supportsStructuredOutputs: true },
@@ -334,7 +334,7 @@ async function resolveCredentials(userId: string): Promise<Credentials> {
     if (!check.allowed) {
       throw new AppError(429, 'USAGE_LIMIT', check.reason ?? 'Usage limit reached. Please provide your own API key in settings to continue using AI features.');
     }
-    return { apiKey: config.centralApiKey!, source: 'central', ownAnthropicOnly: false };
+    return { apiKey: config.anthropicApiKey!, source: 'central', ownAnthropicOnly: false };
   }
 
   const user = await prisma.user.findUnique({
@@ -349,7 +349,7 @@ async function resolveCredentials(userId: string): Promise<Credentials> {
   if (centralAvailable) {
     const check = await canUseCentralKey(userId);
     if (!check.allowed) throw new AppError(429, 'USAGE_LIMIT', check.reason ?? 'Usage limit reached.');
-    return { apiKey: config.centralApiKey!, source: 'central', ownAnthropicOnly: false };
+    return { apiKey: config.anthropicApiKey!, source: 'central', ownAnthropicOnly: false };
   }
 
   throw new AppError(400, 'NO_API_KEY', 'No API key available. Please add one in settings.');
