@@ -233,14 +233,14 @@ export async function reviewRejection(
 }
 
 export async function streamChat(
-  req: Request, res: Response,
+  _req: Request, res: Response,
   userId: string,
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   analyticsContext?: AiAnalyticsContext,
 ) {
   const controller = new AbortController();
-  req.on('close', () => controller.abort());
+  res.on('close', () => controller.abort());
 
   sseHeaders(res);
 

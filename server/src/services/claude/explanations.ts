@@ -76,7 +76,7 @@ async function runExplanation(userId: string, deckId: string, version: number): 
   }
 }
 
-export async function streamExplanation(req: Request, res: Response, userId: string, deckId: string) {
+export async function streamExplanation(_req: Request, res: Response, userId: string, deckId: string) {
   const deck = await prisma.deck.findUnique({
     where: { nodeId: deckId },
     include: { node: { select: { name: true } } },
@@ -86,7 +86,7 @@ export async function streamExplanation(req: Request, res: Response, userId: str
   await setExplanationGenerating(deckId);
 
   const controller = new AbortController();
-  req.on('close', () => controller.abort());
+  res.on('close', () => controller.abort());
 
   sseHeaders(res);
 
@@ -132,11 +132,11 @@ export async function streamExplanation(req: Request, res: Response, userId: str
 }
 
 export async function streamExplanationGeneric(
-  req: Request, res: Response,
+  _req: Request, res: Response,
   userId: string, topic: string, language: string, responseLanguage = 'English', analyticsContext?: AiAnalyticsContext,
 ) {
   const controller = new AbortController();
-  req.on('close', () => controller.abort());
+  res.on('close', () => controller.abort());
 
   sseHeaders(res);
 
