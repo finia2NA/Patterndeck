@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { getAuthToken } from '@/lib/storage';
 import { generateExplanation, generateCards } from '@/lib/api';
+import { getDisplayErrorMessage } from '@/lib/errorDisplay';
 import type { AnalyticsContext, Card, LoadPhase } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 
@@ -63,7 +64,7 @@ export function useSessionLoader({ topic, language, cardCount, existingExplanati
         setCards(result.cards);
       } catch (e) {
         if (cancelled) return;
-        setLoadError(e instanceof Error ? e.message : t('common.errorGeneric'));
+        setLoadError(getDisplayErrorMessage(e, t));
       } finally {
         if (!cancelled) setLoading(false);
       }

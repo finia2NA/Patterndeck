@@ -85,6 +85,13 @@ export class ApiError extends Error {
   }
 }
 
+export class RequestTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
+    this.name = 'RequestTimeoutError';
+  }
+}
+
 async function handleHttpError(status: number, bodyJson: any, redirectOnUnauthorized = true): Promise<never> {
   if (status === 401 && redirectOnUnauthorized) {
     await clearAuthToken();
@@ -102,23 +109,87 @@ async function handleHttpError(status: number, bodyJson: any, redirectOnUnauthor
 
 type ApiRequestOptions = RequestInit & {
   redirectOnUnauthorized?: boolean;
+  timeoutMs?: number;
+  retryCount?: number;
+  retryDelayMs?: number;
 };
 
-async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { redirectOnUnauthorized = true, ...fetchOptions } = options;
-  const headers = await getHeaders();
-  const baseUrl = await getBaseUrl();
-  const res = await fetch(`${baseUrl}${path}`, {
-    ...fetchOptions,
-    headers: { ...headers, ...fetchOptions.headers },
-  });
+const DEFAULT_REQUEST_TIMEOUT_MS = 20000;
+const DEFAULT_REQUEST_RETRY_COUNT = 0;
+const DEFAULT_REQUEST_RETRY_DELAY_MS = 700;
+const CARD_GENERATION_REQUEST_OPTIONS = { timeoutMs: 40000, retryCount: 2 } as const;
+const CARD_FEEDBACK_REQUEST_OPTIONS = { timeoutMs: 20000, retryCount: 2 } as const;
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    await handleHttpError(res.status, body, redirectOnUnauthorized);
+function wait(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isRetryableRequestError(error: unknown): boolean {
+  if (error instanceof RequestTimeoutError) return true;
+  if (error instanceof ApiError) return error.statusCode === 408 || error.statusCode === 429 || error.statusCode >= 500;
+  if (error instanceof TypeError) return true;
+  if (error instanceof Error) return error.name === 'AbortError' || error.message.toLowerCase().includes('network');
+  return false;
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const externalSignal = options.signal;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const abortFromExternal = () => controller.abort();
+
+  if (externalSignal?.aborted) {
+    controller.abort();
+  } else {
+    externalSignal?.addEventListener('abort', abortFromExternal, { once: true });
   }
 
-  return res.json() as Promise<T>;
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted && !externalSignal?.aborted) {
+      throw new RequestTimeoutError(timeoutMs);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+    externalSignal?.removeEventListener('abort', abortFromExternal);
+  }
+}
+
+async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const {
+    redirectOnUnauthorized = true,
+    timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+    retryCount = DEFAULT_REQUEST_RETRY_COUNT,
+    retryDelayMs = DEFAULT_REQUEST_RETRY_DELAY_MS,
+    ...fetchOptions
+  } = options;
+  const headers = await getHeaders();
+  const baseUrl = await getBaseUrl();
+
+  for (let attempt = 0; attempt <= retryCount; attempt += 1) {
+    try {
+      const res = await fetchWithTimeout(`${baseUrl}${path}`, {
+        ...fetchOptions,
+        headers: { ...headers, ...fetchOptions.headers },
+      }, timeoutMs);
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        await handleHttpError(res.status, body, redirectOnUnauthorized);
+      }
+
+      return res.json() as Promise<T>;
+    } catch (error) {
+      if (attempt >= retryCount || !isRetryableRequestError(error)) {
+        throw error;
+      }
+      await wait(retryDelayMs * (attempt + 1));
+    }
+  }
+
+  throw new Error('Request failed');
 }
 
 let settingsHydrationPromise: Promise<SettingsMap> | null = null;
@@ -608,6 +679,7 @@ export async function generateCards(topic: string, language: string, count: numb
   return request<{ cards: Card[]; cost: number }>('/ai/cards', {
     method: 'POST',
     body: JSON.stringify({ topic, language, count, explanation, analyticsContext, deckId, uiLanguage: getAiResponseLanguage() }),
+    ...CARD_GENERATION_REQUEST_OPTIONS,
   });
 }
 
@@ -615,6 +687,7 @@ export async function judgeAnswer(card: Card, userAnswer: string, language: stri
   return request<{ correct: boolean; reason: string; cost: number }>('/ai/judge', {
     method: 'POST',
     body: JSON.stringify({ card, userAnswer, language, explanation, brevity, analyticsContext, uiLanguage: getAiResponseLanguage() }),
+    ...CARD_FEEDBACK_REQUEST_OPTIONS,
   });
 }
 
@@ -782,6 +855,7 @@ export async function explainRejection(card: Card, userAnswer: string, language:
   return request<{ explanation: string; overrideToCorrect: boolean; cost: number }>('/ai/rejection', {
     method: 'POST',
     body: JSON.stringify({ card, userAnswer, language, explanation, brevity, analyticsContext, uiLanguage: getAiResponseLanguage() }),
+    ...CARD_FEEDBACK_REQUEST_OPTIONS,
   });
 }
 
@@ -789,6 +863,7 @@ export async function explainSentence(card: Card, language: string, explanation?
   return request<{ explanation: string; cost: number }>('/ai/explain-sentence', {
     method: 'POST',
     body: JSON.stringify({ card, language, explanation, analyticsContext, uiLanguage: getAiResponseLanguage() }),
+    ...CARD_FEEDBACK_REQUEST_OPTIONS,
   });
 }
 

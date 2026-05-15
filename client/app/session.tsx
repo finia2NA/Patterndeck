@@ -12,15 +12,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, useColors } from '@/constants/theme';
 import { createDeckFromPath, getDeck } from '@/lib/api';
-import type { AnalyticsContext, Card, DeckCard } from '@/lib/types';
-import type { LoadPhase } from '@/lib/types';
+import type { AnalyticsContext, Card, DeckCard, LoadPhase } from '@/lib/types';
 import type { CardCount } from '@/constants/session';
 import { useSessionLoader } from '@/hooks/useSessionLoader';
 import { useMultiDeckSession } from '@/hooks/useMultiDeckSession';
 import type { DeckInfo } from '@/hooks/useMultiDeckSession';
 import type { OverlayDeck } from '@/components/session';
 import { DeckModal, type DeckFormData } from '@/components/home/DeckModal';
+import { ErrorPopup } from '@/components/ErrorPopup';
 import { useSessionCards } from '@/hooks/useSessionCards';
+import { useErrorPopup } from '@/hooks/useErrorPopup';
 import { formatCost } from '@/lib/format';
 
 import {
@@ -91,7 +92,6 @@ function QuickSession({ topic, language, cardCount }: { topic: string; language:
       loading={loader.loading}
       loadPhase={loader.loadPhase}
       loadError={loader.loadError}
-      setLoadError={loader.setLoadError}
       cards={loader.cards}
       setCards={loader.setCards}
       totalCost={loader.totalCost}
@@ -155,7 +155,6 @@ function DeckSession({
       loading={multi.loading}
       loadPhase="cards"
       loadError={multi.loadError}
-      setLoadError={multi.setLoadError}
       cards={multi.cards}
       setCards={multi.setCards}
       totalCost={multi.totalCost}
@@ -226,7 +225,6 @@ interface SessionUIProps {
   loading: boolean;
   loadPhase: LoadPhase;
   loadError: string | null;
-  setLoadError: (e: string | null) => void;
   cards: (Card | DeckCard)[];
   setCards: (fn: any) => void;
   totalCost: number;
@@ -248,7 +246,7 @@ interface SessionUIProps {
 
 function SessionUI({
   studySessionId,
-  loading, loadPhase, loadError, setLoadError,
+  loading, loadPhase, loadError,
   cards, setCards, totalCost, addCost,
   explanation, wasTruncated, topic, clarification, language,
   showExplanationOverlay, markStudied, deckName, overlayDecks, decks, studyMode = 'scheduled',
@@ -263,6 +261,7 @@ function SessionUI({
   const [showOverlay, setShowOverlay] = useState(showExplanationOverlay);
   const [panelNarrowed, setPanelNarrowed] = useState(false);
   const [hasContentBelow, setHasContentBelow] = useState(false);
+  const { errorPopup, showError, dismissError } = useErrorPopup();
   const studiedRef = useRef(false);
   const startedAtRef = useRef(Date.now());
   const startedTrackedRef = useRef(false);
@@ -274,7 +273,7 @@ function SessionUI({
   const [quickDeckCreated, setQuickDeckCreated] = useState(false);
 
   const session = useSessionCards({
-    cards, setCards, language, explanation, addCost, setLoadError, showOverlay,
+    cards, setCards, language, explanation, addCost, showErrorPopup: showError, showOverlay,
     analyticsContext: analyticsBase,
     deckInfoById: decks,
   });
@@ -609,6 +608,12 @@ function SessionUI({
           </View>
         </>
       )}
+      <ErrorPopup
+        visible={errorPopup.visible}
+        errorName={errorPopup.errorName}
+        message={errorPopup.message}
+        onDismiss={dismissError}
+      />
     </View>
   );
 }

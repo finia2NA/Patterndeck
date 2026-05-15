@@ -56,6 +56,7 @@ export interface DeckCard extends Card {
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  failed?: boolean;
 }
 
 export interface WordHint {

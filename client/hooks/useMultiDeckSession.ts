@@ -9,6 +9,7 @@ import {
   getSetting,
   markStudied as apiMarkStudied,
 } from '@/lib/api';
+import { getDisplayErrorMessage } from '@/lib/errorDisplay';
 import type { AnalyticsContext, DeckCard, DeckData } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 
@@ -165,7 +166,7 @@ export function useMultiDeckSession({ nodeId, selectedDeckIds, studySessionId, s
           setCards(allCards);
         }
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : t('common.errorGeneric'));
+        setLoadError(getDisplayErrorMessage(e, t));
       } finally {
         setLoading(false);
       }

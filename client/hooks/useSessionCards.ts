@@ -11,14 +11,31 @@ interface UseSessionCardsParams {
   language: string;
   explanation: string;
   addCost: (usd: number) => void;
-  setLoadError: (e: string | null) => void;
+  showErrorPopup: (error: unknown) => void;
   showOverlay: boolean;
   analyticsContext: AnalyticsContext;
   deckInfoById?: Map<string, { topic: string; deckName: string; language: string }>;
 }
 
+function toApiChatMessages(messages: ChatMessage[], nextUserMessage: ChatMessage) {
+  const cleaned: ChatMessage[] = [];
+
+  for (const message of messages) {
+    if (message.failed) {
+      if (cleaned[cleaned.length - 1]?.role === 'user') cleaned.pop();
+      continue;
+    }
+    cleaned.push(message);
+  }
+
+  return [...cleaned, nextUserMessage].map(m => ({
+    role: m.role as 'user' | 'assistant',
+    content: m.content,
+  }));
+}
+
 export function useSessionCards({
-  cards, setCards, language, explanation, addCost, setLoadError, showOverlay, analyticsContext, deckInfoById,
+  cards, setCards, language, explanation, addCost, showErrorPopup, showOverlay, analyticsContext, deckInfoById,
 }: UseSessionCardsParams) {
   const { t } = useI18n();
   const [cardPhase, setCardPhase] = useState<CardPhase>('input');
@@ -94,7 +111,8 @@ export function useSessionCards({
         setWrongExplanation(result.explanation);
         setCardPhase('wrong_shown');
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : t('common.apiError'));
+        analytics.captureException(e as Error, { action: 'explain_sentence' });
+        showErrorPopup(e);
         setCardPhase('input');
       }
       return;
@@ -130,7 +148,8 @@ export function useSessionCards({
         }
       }
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : t('common.apiError'));
+      analytics.captureException(e as Error, { action: 'submit_answer' });
+      showErrorPopup(e);
       setCardPhase('input');
     }
   }
@@ -268,10 +287,7 @@ export function useSessionCards({
     }
     metricsRef.current.chatMessageCount += 1;
 
-    const apiMessages = [...chatMessages, userMsg].map(m => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    }));
+    const apiMessages = toApiChatMessages(chatMessages, userMsg);
 
     try {
       await chatAboutCard(
@@ -294,7 +310,8 @@ export function useSessionCards({
         const updated = [...prev];
         updated[updated.length - 1] = {
           role: 'assistant',
-          content: t('common.errorGeneric'),
+          content: t('session.chatError'),
+          failed: true,
         };
         return updated;
       });

@@ -54,9 +54,13 @@ export function CardChat({ messages, streaming, onSend }: CardChatProps) {
                 <Text className="text-foreground text-sm">{msg.content}</Text>
               </View>
             ) : (
-              <View className="bg-background-warm rounded-lg px-3 py-2">
+              <View className={`${msg.failed ? 'bg-badge-error' : 'bg-background-warm'} rounded-lg px-3 py-2`}>
                 {msg.content ? (
-                  <GrammarMarkdown>{msg.content}</GrammarMarkdown>
+                  msg.failed ? (
+                    <Text className="text-error text-sm">{msg.content}</Text>
+                  ) : (
+                    <GrammarMarkdown>{msg.content}</GrammarMarkdown>
+                  )
                 ) : (
                   <ActivityIndicator size="small" color={colors.border} />
                 )}

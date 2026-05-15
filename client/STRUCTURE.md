@@ -81,6 +81,7 @@ client/
 │   ├── AnimatedCollapsible.tsx             ← Collapsible section with height animation
 │   ├── AnimatedTabbed.tsx                  ← Animated tab switcher
 │   ├── BrandLogo.tsx                       ← App logo using the in-app light mark
+│   ├── ErrorPopup.tsx                      ← Reusable recoverable error notice (web modal, iOS alert, Android toast)
 │   ├── Icon.tsx / Icon.ios.tsx / Icon.types.ts ← Cross-platform icon system
 │   ├── NeedsConfirmationButton.tsx         ← Two-tap confirmation button
 │   ├── OnboardingBackground.tsx            ← Decorative onboarding background
@@ -90,6 +91,7 @@ client/
 │   ├── PillDropdown.tsx / .ios.tsx / .web.tsx ← Generic pill-style dropdown (platform-split)
 │   ├── PullDownCard.tsx                    ← Card with pull-down dismiss gesture
 │   ├── RainbowButton.tsx                   ← Accent-gradient button
+│   ├── SmallModal.tsx                      ← Centered lightweight modal shell with backdrop dismiss
 │   ├── ThemedSwitch.tsx / .web.tsx         ← Toggle switch (platform-split: CSS knob on web, RN Switch on native)
 │   └── TouchTarget.tsx                     ← Minimum-size touch target wrapper
 │
@@ -97,6 +99,7 @@ client/
 │   ├── useDeckTree.ts          ← Fetches and caches the full deck tree from server
 │   ├── useSessionLoader.ts     ← Loads explanation + cards for a quick-study session
 │   ├── useSessionCards.ts      ← Card state management during an active session
+│   ├── useErrorPopup.ts        ← Shared state helper for recoverable error popups
 │   ├── useMultiDeckSession.ts  ← Assembles a multi-deck session from a collection
 │   ├── useScreenSize.ts        ← Responsive breakpoint / screen dimension hook
 │   ├── useRequireAdmin.ts      ← Redirects non-admin users and gates admin-only UI rendering
@@ -109,8 +112,9 @@ client/
 │           └── settingsStore.ts ← Zustand-style settings store (UI language, study languages, sort order, etc.)
 │
 ├── lib/
-│   ├── api.ts                  ← All HTTP calls to the server (auth, tree, decks, AI)
+│   ├── api.ts                  ← All HTTP calls to the server (auth, tree, decks, AI) with retry/timeout handling
 │   ├── analytics.tsx           ← PostHog provider + event helpers
+│   ├── errorDisplay.ts         ← Converts thrown errors into localized user-facing names/messages
 │   ├── format.ts               ← Date/number formatting utilities, including usage percent formatting
 │   ├── i18n.ts                 ← UI locale detection, translations, and study-language filtering
 │   ├── notifications.ts        ← Expo push token registration + permission request
@@ -168,25 +172,25 @@ Handles two modes:
 - **QuickSession** — one-off topic entered on the home screen
 - **DeckSession** — saved deck or collection (fetches descendant deck IDs, loads all cards)
 
-Both modes share `SessionUI`: explanation overlay, card loop (`FlashcardDeck`), chat panel (`CardChat`), and post-session rating (`DeckRatingCard` → `SessionCompleteScreen`). Ratings feed the SRS scheduler on the server.
+Both modes share `SessionUI`: explanation overlay, card loop (`FlashcardDeck`), recoverable error popup (`ErrorPopup`), chat panel (`CardChat`), and post-session rating (`DeckRatingCard` → `SessionCompleteScreen`). Ratings feed the SRS scheduler on the server.
 
 ### `app/reset-password.tsx`
 Handles the deep-link from a password reset email. Reads the token from the URL, lets the user set a new password, and redirects to onboarding on success.
 
 ### `lib/api.ts`
-The single place all server communication happens. Uses environment-aware base URL: production web uses relative `/api/v1` (same origin via nginx), native production uses `extra.productionBackendBaseUrl`, and dev uses the configured host/port from `app.config.ts` → `extra` with an optional persisted backend override. Production builds ignore persisted backend overrides. Exports typed functions for every endpoint group:
+The single place all server communication happens. Uses environment-aware base URL: production web uses relative `/api/v1` (same origin via nginx), native production uses `extra.productionBackendBaseUrl`, and dev uses the configured host/port from `app.config.ts` → `extra` with an optional persisted backend override. Production builds ignore persisted backend overrides. Non-streaming requests can opt into timeout and limited retry handling for transient failures; card generation gets 40s while judgment/explanation checks get 20s. Exports typed functions for every endpoint group:
 - `register`, `login`, `loginWithApple`, `loginWithGoogle`, `getMe`, `validateApiKey`
 - `requestPasswordReset`, `resetPassword`
 - `setApiKey`, `deleteApiKey`, `getApiKeyStatus`
 - `getTree`, `getNode`, `getNodePath`, `getDescendantDeckIds`, `deleteNode`
 - `createDeckFromPath`, `getDeck`, `updateDeck`, `markStudied`, `submitDeckReview`
 - `getSetting`, `setSetting`
-- `generateExplanation` (SSE), `explainRejection` (SSE), `chatAboutCard` (SSE)
-- `generateCards`, `judgeAnswer`
+- `generateExplanation` (SSE), `chatAboutCard` (SSE)
+- `generateCards`, `judgeAnswer`, `explainRejection`, `explainSentence`
 - `registerPushToken`, `unregisterPushToken`
 - `getAdminUsers`, `updateAdminConfig`, `getAiProviders`, `getAiProviderModels`, `getAiRouting`, `updateAiRouting`
 
-SSE endpoints return an async generator consumed via `streamSSE()`.
+SSE endpoints return an async generator consumed via `streamSSE()` and do not auto-retry.
 
 ### `lib/types.ts`
 Core types shared across the client:
@@ -194,7 +198,7 @@ Core types shared across the client:
 Card            { id, english, targetLanguage, sentenceContext?, notes? }
 TreeNode        { id, parentId, name, sortOrder, deck, children[] }
 DeckData        { nodeId, topic, language, explanation, explanationStatus, grammarCaseStatus, cardCount, lastStudiedAt, dueAt, intervalDays }
-ChatMessage     { role, content }
+ChatMessage     { role, content, failed? }
 ```
 
 ## Styling
