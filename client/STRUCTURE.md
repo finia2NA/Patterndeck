@@ -172,7 +172,7 @@ Handles two modes:
 - **QuickSession** — one-off topic entered on the home screen
 - **DeckSession** — saved deck or collection (fetches descendant deck IDs, loads all cards)
 
-Both modes share `SessionUI`: explanation overlay, card loop (`FlashcardDeck`), recoverable error popup (`ErrorPopup`), chat panel (`CardChat`), and post-session rating (`DeckRatingCard` → `SessionCompleteScreen`). Ratings feed the SRS scheduler on the server.
+Both modes share `SessionUI`: explanation overlay, card loop (`FlashcardDeck`), recoverable error popup (`ErrorPopup`), chat panel (`CardChat`), and post-session rating (`DeckRatingCard` → `SessionCompleteScreen`). Quick study generates an abbreviated explanation summary during the existing cards loading phase and uses that for AI card/feedback/chat context while continuing to display the full explanation. Ratings feed the SRS scheduler on the server.
 
 ### `app/reset-password.tsx`
 Handles the deep-link from a password reset email. Reads the token from the URL, lets the user set a new password, and redirects to onboarding on success.
@@ -185,7 +185,7 @@ The single place all server communication happens. Uses environment-aware base U
 - `getTree`, `getNode`, `getNodePath`, `getDescendantDeckIds`, `deleteNode`
 - `createDeckFromPath`, `getDeck`, `updateDeck`, `markStudied`, `submitDeckReview`
 - `getSetting`, `setSetting`
-- `generateExplanation` (SSE), `chatAboutCard` (SSE)
+- `generateExplanation` (SSE), `generateExplanationSummary`, `chatAboutCard` (SSE)
 - `generateCards`, `judgeAnswer`, `explainRejection`, `explainSentence`
 - `registerPushToken`, `unregisterPushToken`
 - `getAdminUsers`, `updateAdminConfig`, `getAiProviders`, `getAiProviderModels`, `getAiRouting`, `updateAiRouting`
@@ -197,7 +197,7 @@ Core types shared across the client:
 ```typescript
 Card            { id, english, targetLanguage, sentenceContext?, notes? }
 TreeNode        { id, parentId, name, sortOrder, deck, children[] }
-DeckData        { nodeId, topic, language, explanation, explanationStatus, grammarCaseStatus, cardCount, lastStudiedAt, dueAt, intervalDays }
+DeckData        { nodeId, topic, language, explanation, explanationSummary?, explanationStatus, grammarCaseStatus, cardCount, lastStudiedAt, dueAt, intervalDays }
 ChatMessage     { role, content, failed? }
 ```
 

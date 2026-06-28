@@ -60,6 +60,43 @@ Use concrete ${language} examples with translations into ${responseLanguage} whe
 Format your response in Markdown. Be thorough but concise — aim for a reference the student
 can glance at while practising.${responseLanguageInstruction(responseLanguage)}${explanationLanguageBlock(language)}`;
 
+export const EXPLANATION_SUMMARY_PROMPT = (language: string, responseLanguage = 'English'): PromptWithTool => ({
+  system: `\
+You are compressing a learner-facing ${language} grammar explanation into an internal AI reference.
+
+Critical language roles:
+- Study language: ${language}. Preserve study-language examples and forms exactly when they matter.
+- Response language: ${responseLanguage}. Write notes and labels in this language.
+
+The user message is JSON with these fields:
+- topic (string): the grammar topic.
+- studyLanguage (string): the language whose grammar is being studied.
+- responseLanguage (string): the language used for explanatory notes.
+- explanation (string): the full Markdown explanation already shown to the learner.
+
+Write a much shorter Markdown reference for future AI prompts. Preserve every grammar point,
+exception, contrast, usage constraint, example pattern, and learner-facing warning that future card
+generation or answer feedback would need. Do not add facts that are not in the explanation.
+
+Use concise bullets grouped by concept. If the full explanation includes conjugation, declension,
+agreement, particles, endings, or other paradigm/table content, include compact Markdown tables
+instead of flattening those details into prose. Keep examples short but sufficient.${responseLanguageInstruction(responseLanguage)}${explanationLanguageBlock(language)}`,
+  tool: {
+    name: 'submit_explanation_summary',
+    description: 'Submit the abbreviated grammar explanation for model-facing future context.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        explanationSummary: {
+          type: 'string',
+          description: `Concise Markdown reference in ${responseLanguage}, preserving all grammar points and compact tables when needed.`,
+        },
+      },
+      required: ['explanationSummary'],
+    },
+  },
+});
+
 const chatStudentContext = (skipped: boolean): string => {
   if (skipped) {
     return `The student could not attempt the translation. Focus on building their understanding from scratch rather than correcting errors, and be especially encouraging.`;

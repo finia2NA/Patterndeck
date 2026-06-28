@@ -166,6 +166,7 @@ All routes require an authenticated user with `role = "admin"`.
 | POST   | `/judge`                | Judge a user's answer (default Haiku, structured tool response) |
 | POST   | `/explain-sentence`     | Explain the correct sentence when learner skips (default Haiku) |
 | POST   | `/explanation/stream`   | Stream grammar explanation (default Sonnet, SSE) |
+| POST   | `/explanation/summary`  | Generate abbreviated model-facing explanation context (default Sonnet, structured tool response) |
 | POST   | `/explanation/edit`     | AI explanation editor: apply search/replace tool calls to Markdown (default Sonnet, tool response) |
 | POST   | `/rejection/stream`     | Stream explanation of a wrong answer (default Sonnet, SSE) |
 | POST   | `/chat/stream`          | Stream chat about the current card (default Sonnet, SSE) |
@@ -196,7 +197,8 @@ Provider-specific structured tool-call transport used by `ai-routing.service.ts`
 ### `claude/` and `claude.service.ts`
 Feature-level AI functions. `claude.service.ts` re-exports the split implementation modules for existing imports, while the transport/model choice is handled by `ai-routing.service.ts`.
 - Uses server-to-server `fetch` — no client-side API key exposure.
-- `generateDeckExplanation(userId, deckId)` — generates and persists explanation, updating `explanationStatus` on the Deck from `pending → generating → ready` (or `error`), then queues grammar-case extraction for saved-deck card coverage.
+- `generateDeckExplanation(userId, deckId)` — generates and persists the full explanation plus abbreviated model-facing `explanationSummary`, updating `explanationStatus` on the Deck from `pending → generating → ready` (or `error`), then queues grammar-case extraction for saved-deck card coverage.
+- `generateExplanationSummary(...)` / `ensureDeckExplanationSummary(...)` — creates or lazily backfills compact Markdown context used by future card, judgment, rejection, sentence explanation, and chat prompts.
 - `editExplanation(userId, explanation, instruction, messages, analyticsContext?)` — agentic explanation editor; sends the current Markdown document + instruction with `replace_text`, `insert_after`, and `rewrite_all` tools; applies all returned tool calls sequentially; returns `{ explanation, summary, cost }`.
 
 ### `grammar-case.service.ts`
@@ -299,6 +301,8 @@ Deck  (leaf data, attached 1-to-1 to a Node)
   clarification (optional freeform context for card generation)
   language
   explanation   (full Markdown, optional)
+  explanationSummary  (abbreviated model-facing context, optional)
+  explanationSummarySourceHash  (topic/language/response-language/explanation hash, optional)
   explanationStatus  pending | generating | ready | error
   grammarCaseStatus  pending | generating | ready | error
   cardCount     (default 10)

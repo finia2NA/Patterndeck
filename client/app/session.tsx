@@ -97,6 +97,7 @@ function QuickSession({ topic, language, cardCount }: { topic: string; language:
       totalCost={loader.totalCost}
       addCost={loader.addCost}
       explanation={loader.explanation}
+      explanationSummary={loader.explanationSummary}
       wasTruncated={loader.explanationTruncated}
       topic={topic}
       language={language}
@@ -230,6 +231,7 @@ interface SessionUIProps {
   totalCost: number;
   addCost: (usd: number) => void;
   explanation: string;
+  explanationSummary?: string;
   wasTruncated: boolean;
   topic: string;
   clarification?: string | null;
@@ -248,7 +250,7 @@ function SessionUI({
   studySessionId,
   loading, loadPhase, loadError,
   cards, setCards, totalCost, addCost,
-  explanation, wasTruncated, topic, clarification, language,
+  explanation, explanationSummary, wasTruncated, topic, clarification, language,
   showExplanationOverlay, markStudied, deckName, overlayDecks, decks, studyMode = 'scheduled',
   quickStudyCardCount, analyticsBase,
 }: SessionUIProps) {
@@ -273,7 +275,7 @@ function SessionUI({
   const [quickDeckCreated, setQuickDeckCreated] = useState(false);
 
   const session = useSessionCards({
-    cards, setCards, language, explanation, addCost, showErrorPopup: showError, showOverlay,
+    cards, setCards, language, explanation, aiExplanationContext: explanationSummary, addCost, showErrorPopup: showError, showOverlay,
     analyticsContext: analyticsBase,
     deckInfoById: decks,
   });
@@ -440,6 +442,7 @@ function SessionUI({
       cardCount: (quickStudyCardCount ?? 0) as CardCount,
       dueDate: '',
       explanation,
+      explanationSummary,
     };
 
     return (
@@ -458,7 +461,7 @@ function SessionUI({
             visible={quickDeckModalVisible}
             onClose={() => setQuickDeckModalVisible(false)}
             onSubmit={async (data: DeckFormData) => {
-              await createDeckFromPath(data.path, data.topic, data.language, data.cardCount, data.clarification, data.explanation);
+              await createDeckFromPath(data.path, data.topic, data.language, data.cardCount, data.clarification, data.explanation, explanationSummary);
               setQuickDeckCreated(true);
               setQuickDeckModalVisible(false);
             }}

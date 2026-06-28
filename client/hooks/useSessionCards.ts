@@ -10,6 +10,7 @@ interface UseSessionCardsParams {
   setCards: (fn: any) => void;
   language: string;
   explanation: string;
+  aiExplanationContext?: string;
   addCost: (usd: number) => void;
   showErrorPopup: (error: unknown) => void;
   showOverlay: boolean;
@@ -35,7 +36,7 @@ function toApiChatMessages(messages: ChatMessage[], nextUserMessage: ChatMessage
 }
 
 export function useSessionCards({
-  cards, setCards, language, explanation, addCost, showErrorPopup, showOverlay, analyticsContext, deckInfoById,
+  cards, setCards, language, explanation, aiExplanationContext, addCost, showErrorPopup, showOverlay, analyticsContext, deckInfoById,
 }: UseSessionCardsParams) {
   const { t } = useI18n();
   const [cardPhase, setCardPhase] = useState<CardPhase>('input');
@@ -59,6 +60,7 @@ export function useSessionCards({
   const metricsRef = useRef({ chatCardsCount: 0, chatMessageCount: 0, hintCardsCount: 0, wordHintCount: 0 });
   const lastJudgmentRef = useRef<{ correct: boolean; overrideToCorrect: boolean; attemptNumber: number } | null>(null);
   const inputRef = useRef<TextInput>(null);
+  const explanationForAi = aiExplanationContext || explanation;
 
   const currentCardContext = useCallback((card: Card | DeckCard, attemptNumber?: number): AnalyticsContext => {
     const cardIndex = Number.isFinite(Number(card.id)) ? Number(card.id) : undefined;
@@ -105,7 +107,7 @@ export function useSessionCards({
       setSubmittedAnswer('');
       setCardPhase('wrong_explaining');
       try {
-        const result = await explainSentence(current, language, explanation, currentCardContext(current));
+        const result = await explainSentence(current, language, explanationForAi, currentCardContext(current));
         if (result.cost) addCost(result.cost);
         setWasSkipped(true);
         setWrongExplanation(result.explanation);
@@ -126,7 +128,7 @@ export function useSessionCards({
     const requestContext = currentCardContext(current, attemptNumber);
 
     try {
-      const result = await judgeAnswer(current, trimmed, language, judgeWithExplanation ? explanation : undefined, feedbackBrevity, requestContext);
+      const result = await judgeAnswer(current, trimmed, language, judgeWithExplanation ? explanationForAi : undefined, feedbackBrevity, requestContext);
       if (result.cost) addCost(result.cost);
 
       if (result.correct) {
@@ -135,7 +137,7 @@ export function useSessionCards({
         setCardPhase('correct');
       } else {
         setCardPhase('wrong_explaining');
-        const rejection = await explainRejection(current, trimmed, language, explanation, feedbackBrevity, requestContext);
+        const rejection = await explainRejection(current, trimmed, language, explanationForAi, feedbackBrevity, requestContext);
         if (rejection.cost) addCost(rejection.cost);
         if (rejection.overrideToCorrect) {
           lastJudgmentRef.current = { correct: true, overrideToCorrect: true, attemptNumber };
@@ -301,7 +303,7 @@ export function useSessionCards({
             return updated;
           });
         },
-        addCost, explanation,
+        addCost, explanationForAi,
         { ...currentCardContext(currentCard), turnIndex },
       );
     } catch (error) {

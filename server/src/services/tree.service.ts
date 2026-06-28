@@ -24,6 +24,7 @@ function mapDeckWithDue(deck: DeckTreeRow, srsConfig: { dailyDueTime: string; re
     clarification: deck.clarification,
     language: deck.language,
     explanation: null,
+    explanationSummary: null,
     explanationStatus: deck.explanationStatus as DeckData['explanationStatus'],
     grammarCaseStatus: deck.grammarCaseStatus as DeckData['grammarCaseStatus'],
     cardCount: deck.cardCount,

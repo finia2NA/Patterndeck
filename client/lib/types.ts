@@ -23,6 +23,7 @@ export interface DeckData {
   clarification: string | null;
   language: string;
   explanation: string | null;
+  explanationSummary?: string | null;
   explanationStatus: ExplanationStatus;
   grammarCaseStatus: GrammarCaseStatus;
   cardCount: number;

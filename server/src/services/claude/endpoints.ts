@@ -238,6 +238,7 @@ export async function streamChat(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   analyticsContext?: AiAnalyticsContext,
+  initialCost = 0,
 ) {
   const controller = new AbortController();
   res.on('close', () => controller.abort());
@@ -255,7 +256,7 @@ export async function streamChat(
         context: analyticsContext,
       },
     );
-    sendDone(res, { cost });
+    sendDone(res, { cost: cost + initialCost });
   } catch (e) {
     if (!controller.signal.aborted) {
       sendError(res, e instanceof Error ? e.message : 'Unknown error');

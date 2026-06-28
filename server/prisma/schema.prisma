@@ -63,6 +63,8 @@ model Deck {
   clarification     String?
   language          String
   explanation       String?
+  explanationSummary String?
+  explanationSummarySourceHash String?
   explanationStatus String    @default("pending")
   grammarCaseStatus String    @default("ready")
   cardCount         Int       @default(10)

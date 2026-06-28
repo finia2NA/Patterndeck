@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { getAuthToken } from '@/lib/storage';
-import { generateExplanation, generateCards } from '@/lib/api';
+import { generateExplanation, generateExplanationSummary, generateCards } from '@/lib/api';
 import { getDisplayErrorMessage } from '@/lib/errorDisplay';
 import type { AnalyticsContext, Card, LoadPhase } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
@@ -22,6 +22,7 @@ export function useSessionLoader({ topic, language, cardCount, existingExplanati
   const [loadPhase, setLoadPhase] = useState<LoadPhase>('explanation');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [explanation, setExplanation] = useState(existingExplanation ?? '');
+  const [explanationSummary, setExplanationSummary] = useState('');
   const [explanationTruncated, setExplanationTruncated] = useState(false);
   const [cards, setCards] = useState<Card[]>([]);
   const [totalCost, setTotalCost] = useState(0);
@@ -58,7 +59,12 @@ export function useSessionLoader({ topic, language, cardCount, existingExplanati
 
         if (cancelled) return;
         setLoadPhase('cards');
-        const result = await generateCards(topic, language, cardCount, fullExplanation, analyticsContext);
+        const summaryResult = await generateExplanationSummary(topic, language, fullExplanation, analyticsContext);
+        if (cancelled) return;
+        if (summaryResult.cost) addCostIfCurrent(summaryResult.cost);
+        setExplanationSummary(summaryResult.explanationSummary);
+
+        const result = await generateCards(topic, language, cardCount, summaryResult.explanationSummary, analyticsContext);
         if (cancelled) return;
         if (result.cost) addCostIfCurrent(result.cost);
         setCards(result.cards);
@@ -79,6 +85,7 @@ export function useSessionLoader({ topic, language, cardCount, existingExplanati
     loadError,
     setLoadError,
     explanation,
+    explanationSummary,
     explanationTruncated,
     cards,
     setCards,

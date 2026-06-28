@@ -9,6 +9,7 @@ import { getNodePath } from '../services/tree.service.js';
 import { getGrammarCaseSummaries, persistImportedCases, type ExtractedGrammarCase } from '../services/grammar-case.service.js';
 import { setGrammarCaseReady } from '../services/deck.service.js';
 import { resolveApiKey } from '../services/claude/shared.js';
+import { explanationSummarySourceHash, generateExplanationSummary } from '../services/claude.service.js';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const JSON_MAX_ENTRIES = 5000;
@@ -17,9 +18,15 @@ export const decksRouter = Router();
 
 decksRouter.use(requireAuth);
 
+function responseLanguage(body: Record<string, unknown>): string {
+  return typeof body.uiLanguage === 'string' && body.uiLanguage.trim().length > 0
+    ? body.uiLanguage.trim()
+    : 'English';
+}
+
 decksRouter.post('/', async (req, res, next) => {
   try {
-    const { path, topic, clarification, language, cardCount, explanation } = req.body;
+    const { path, topic, clarification, language, cardCount, explanation, explanationSummary } = req.body;
     if (!path || !topic || !language) {
       throw new AppError(400, 'MISSING_FIELDS', 'path, topic, and language are required.');
     }
@@ -29,7 +36,43 @@ decksRouter.post('/', async (req, res, next) => {
     const deckClarification = typeof clarification === 'string' && clarification.trim().length > 0
       ? clarification
       : undefined;
-    const nodeId = await createDeckFromPath(req.userId!, path, topic, language, cardCount, deckClarification, existingExplanation);
+    const summaryResponseLanguage = responseLanguage(req.body);
+    let summaryForSave: string | undefined;
+    let summarySourceHash: string | undefined;
+    if (existingExplanation !== undefined) {
+      const providedSummary = typeof explanationSummary === 'string' && explanationSummary.trim().length > 0
+        ? explanationSummary.trim()
+        : undefined;
+      if (providedSummary) {
+        summaryForSave = providedSummary;
+      } else {
+        const generated = await generateExplanationSummary(
+          req.userId!,
+          String(topic),
+          String(language),
+          existingExplanation,
+          summaryResponseLanguage,
+          {
+            appSessionId: req.appSessionId,
+            deckTopic: String(topic),
+            language: String(language),
+          },
+        );
+        summaryForSave = generated.explanationSummary;
+      }
+      summarySourceHash = explanationSummarySourceHash(String(topic), String(language), summaryResponseLanguage, existingExplanation);
+    }
+    const nodeId = await createDeckFromPath(
+      req.userId!,
+      path,
+      topic,
+      language,
+      cardCount,
+      deckClarification,
+      existingExplanation,
+      summaryForSave,
+      summarySourceHash,
+    );
 
     if (existingExplanation === undefined) {
       enqueueExplanation(req.userId!, nodeId);
@@ -215,7 +258,17 @@ decksRouter.patch('/:nodeId', async (req, res, next) => {
       req.userId!,
       req.params.nodeId,
       { name, topic, clarification, language, cardCount, explanation },
-      { beforeRegenerateExplanation: () => resolveApiKey(req.userId!).then(() => undefined) },
+      {
+        beforeRegenerateExplanation: () => resolveApiKey(req.userId!).then(() => undefined),
+        responseLanguage: responseLanguage(req.body),
+        analyticsContext: {
+          appSessionId: req.appSessionId,
+          deckId: req.params.nodeId,
+          deckTopic: typeof topic === 'string' ? topic : undefined,
+          language: typeof language === 'string' ? language : undefined,
+          traceId: `explanation_summary:${req.params.nodeId}`,
+        },
+      },
     );
 
     if (result.regenerateExplanation) {

@@ -340,10 +340,11 @@ export async function createDeckFromPath(
   cardCount = 10,
   clarification?: string,
   explanation?: string,
+  explanationSummary?: string,
 ) {
   return request<{ nodeId: string }>('/decks', {
     method: 'POST',
-    body: JSON.stringify({ path, topic, clarification, language, cardCount, explanation }),
+    body: JSON.stringify({ path, topic, clarification, language, cardCount, explanation, explanationSummary, uiLanguage: getAiResponseLanguage() }),
   }).then(r => r.nodeId);
 }
 
@@ -354,7 +355,7 @@ export async function getDeck(nodeId: string) {
 export async function updateDeck(nodeId: string, updates: { name?: string; topic?: string; clarification?: string; language?: string; cardCount?: number; explanation?: string; regenerateGrammarCases?: boolean }) {
   return request<{ regenerateExplanation: boolean }>(`/decks/${nodeId}`, {
     method: 'PATCH',
-    body: JSON.stringify(updates),
+    body: JSON.stringify({ ...updates, uiLanguage: getAiResponseLanguage() }),
   });
 }
 
@@ -582,6 +583,7 @@ export type AiEndpoint =
   | 'explain-sentence'
   | 'word-hint'
   | 'explanation'
+  | 'explanation-summary'
   | 'case-extraction'
   | 'rejection'
   | 'chat'
@@ -849,6 +851,19 @@ export async function generateExplanation(
 ): Promise<{ wasTruncated: boolean }> {
   const result = await streamSSE('/ai/explanation/stream', { topic, language, analyticsContext, uiLanguage: getAiResponseLanguage() }, onChunk, onCost);
   return { wasTruncated: result.wasTruncated ?? false };
+}
+
+export async function generateExplanationSummary(
+  topic: string,
+  language: string,
+  explanation: string,
+  analyticsContext?: AnalyticsContext,
+) {
+  return request<{ explanationSummary: string; cost: number }>('/ai/explanation/summary', {
+    method: 'POST',
+    body: JSON.stringify({ topic, language, explanation, analyticsContext, uiLanguage: getAiResponseLanguage() }),
+    ...CARD_GENERATION_REQUEST_OPTIONS,
+  });
 }
 
 export async function explainRejection(card: Card, userAnswer: string, language: string, explanation?: string, brevity?: 'brief' | 'normal', analyticsContext?: AnalyticsContext) {

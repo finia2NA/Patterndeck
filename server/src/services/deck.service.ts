@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 import type { DeckData } from '../types/index.js';
+import type { AiAnalyticsContext } from './analytics.service.js';
 import { getSetting } from './settings.service.js';
 import {
   buildSrsConfig,
@@ -35,7 +36,8 @@ async function getNextSortOrder(userId: string, parentId: string | null): Promis
 
 function mapDeckRow(deck: {
   nodeId: string; topic: string; clarification: string | null; language: string;
-  explanation: string | null; explanationStatus: string; grammarCaseStatus: string;
+  explanation: string | null; explanationSummary: string | null;
+  explanationStatus: string; grammarCaseStatus: string;
   cardCount: number; lastStudiedAt: Date | null;
   dueAt: Date | null; intervalDays: number;
 }, srsConfig: { dailyDueTime: string; reviewTimezone: string }): DeckData {
@@ -46,6 +48,7 @@ function mapDeckRow(deck: {
     clarification: deck.clarification,
     language: deck.language,
     explanation: deck.explanation,
+    explanationSummary: deck.explanationSummary,
     explanationStatus: deck.explanationStatus as DeckData['explanationStatus'],
     grammarCaseStatus: deck.grammarCaseStatus as DeckData['grammarCaseStatus'],
     cardCount: deck.cardCount,
@@ -66,6 +69,8 @@ export async function createDeckFromPath(
   cardCount = 0,
   clarification?: string,
   explanation?: string,
+  explanationSummary?: string,
+  explanationSummarySourceHash?: string,
 ): Promise<string> {
   const segments = path.split('::').map(s => s.trim()).filter(Boolean);
   if (segments.length === 0) throw new AppError(400, 'INVALID_PATH', 'Path cannot be empty.');
@@ -107,7 +112,12 @@ export async function createDeckFromPath(
           language,
           cardCount,
           grammarCaseStatus: 'pending',
-          ...(explanation !== undefined ? { explanation, explanationStatus: 'ready' } : {}),
+          ...(explanation !== undefined ? {
+            explanation,
+            explanationSummary: explanationSummary ?? null,
+            explanationSummarySourceHash: explanationSummarySourceHash ?? null,
+            explanationStatus: 'ready',
+          } : {}),
         },
       },
     },
@@ -130,11 +140,48 @@ export async function getDeck(userId: string, nodeId: string): Promise<DeckData 
   return mapDeckRow(node.deck, buildSrsConfig(dailyDueTime, reviewTimezone));
 }
 
+async function summarizeExplanationForDeckUpdate(
+  userId: string,
+  nodeId: string,
+  topic: string,
+  language: string,
+  explanation: string,
+  responseLanguage: string,
+  analyticsContext?: AiAnalyticsContext,
+): Promise<{ explanationSummary: string | null; explanationSummarySourceHash: string | null }> {
+  if (!explanation.trim()) {
+    return { explanationSummary: null, explanationSummarySourceHash: null };
+  }
+  const { generateExplanationSummary, explanationSummarySourceHash } = await import('./claude.service.js');
+  const { explanationSummary } = await generateExplanationSummary(
+    userId,
+    topic,
+    language,
+    explanation,
+    responseLanguage,
+    {
+      ...analyticsContext,
+      deckId: nodeId,
+      deckTopic: analyticsContext?.deckTopic ?? topic,
+      language: analyticsContext?.language ?? language,
+      traceId: analyticsContext?.traceId ?? `explanation_summary:${nodeId}`,
+    },
+  );
+  return {
+    explanationSummary,
+    explanationSummarySourceHash: explanationSummarySourceHash(topic, language, responseLanguage, explanation),
+  };
+}
+
 export async function updateDeck(
   userId: string,
   nodeId: string,
   updates: { name?: string; topic?: string; clarification?: string | null; language?: string; cardCount?: number; explanation?: string },
-  options: { beforeRegenerateExplanation?: () => Promise<void> } = {},
+  options: {
+    beforeRegenerateExplanation?: () => Promise<void>;
+    responseLanguage?: string;
+    analyticsContext?: AiAnalyticsContext;
+  } = {},
 ): Promise<{ regenerateExplanation: boolean; explanationChanged: boolean }> {
   const node = await prisma.node.findFirst({
     where: { id: nodeId, userId },
@@ -144,6 +191,8 @@ export async function updateDeck(
 
   let regenerate = false;
   let explanationChanged = false;
+  let nextExplanationSummary: string | null | undefined;
+  let nextExplanationSummarySourceHash: string | null | undefined;
 
   if (
     updates.topic !== undefined ||
@@ -163,6 +212,19 @@ export async function updateDeck(
     }
     if (!regenerate && updates.explanation !== undefined) {
       explanationChanged = updates.explanation !== node.deck.explanation;
+      if (explanationChanged) {
+        const summary = await summarizeExplanationForDeckUpdate(
+          userId,
+          nodeId,
+          newTopic,
+          newLang,
+          updates.explanation,
+          options.responseLanguage ?? 'English',
+          options.analyticsContext,
+        );
+        nextExplanationSummary = summary.explanationSummary;
+        nextExplanationSummarySourceHash = summary.explanationSummarySourceHash;
+      }
     }
 
     if (updates.name !== undefined) {
@@ -177,9 +239,15 @@ export async function updateDeck(
         language: newLang,
         cardCount: newCount,
         ...(regenerate
-          ? { explanationStatus: 'pending', grammarCaseStatus: 'pending', explanation: null }
+          ? { explanationStatus: 'pending', grammarCaseStatus: 'pending', explanation: null, explanationSummary: null, explanationSummarySourceHash: null }
           : explanationChanged
-            ? { explanation: updates.explanation, explanationStatus: 'ready', grammarCaseStatus: 'pending' }
+            ? {
+              explanation: updates.explanation,
+              explanationSummary: nextExplanationSummary,
+              explanationSummarySourceHash: nextExplanationSummarySourceHash,
+              explanationStatus: 'ready',
+              grammarCaseStatus: 'pending',
+            }
             : updates.explanation !== undefined
               ? { explanation: updates.explanation, explanationStatus: 'ready' }
               : {}),
@@ -188,9 +256,24 @@ export async function updateDeck(
   } else if (updates.explanation !== undefined) {
     explanationChanged = updates.explanation !== node.deck.explanation;
     if (explanationChanged) {
+      const summary = await summarizeExplanationForDeckUpdate(
+        userId,
+        nodeId,
+        node.deck.topic,
+        node.deck.language,
+        updates.explanation,
+        options.responseLanguage ?? 'English',
+        options.analyticsContext,
+      );
       await prisma.deck.update({
         where: { nodeId },
-        data: { explanation: updates.explanation, explanationStatus: 'ready', grammarCaseStatus: 'pending' },
+        data: {
+          explanation: updates.explanation,
+          explanationSummary: summary.explanationSummary,
+          explanationSummarySourceHash: summary.explanationSummarySourceHash,
+          explanationStatus: 'ready',
+          grammarCaseStatus: 'pending',
+        },
       });
     }
   } else if (updates.name !== undefined) {
@@ -296,10 +379,21 @@ export async function deleteNode(userId: string, nodeId: string): Promise<void> 
   await prisma.node.delete({ where: { id: nodeId } });
 }
 
-export async function setExplanation(nodeId: string, explanation: string): Promise<void> {
+export async function setExplanation(
+  nodeId: string,
+  explanation: string,
+  explanationSummary: string,
+  explanationSummarySourceHash: string,
+): Promise<void> {
   await prisma.deck.update({
     where: { nodeId },
-    data: { explanation, explanationStatus: 'ready', grammarCaseStatus: 'pending' },
+    data: {
+      explanation,
+      explanationSummary,
+      explanationSummarySourceHash,
+      explanationStatus: 'ready',
+      grammarCaseStatus: 'pending',
+    },
   });
 }
 
@@ -313,7 +407,7 @@ export async function setExplanationError(nodeId: string): Promise<void> {
 export async function setExplanationGenerating(nodeId: string): Promise<void> {
   await prisma.deck.update({
     where: { nodeId },
-    data: { explanationStatus: 'generating' },
+    data: { explanationStatus: 'generating', explanationSummary: null, explanationSummarySourceHash: null },
   });
 }
 
